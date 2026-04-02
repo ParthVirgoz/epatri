@@ -10,8 +10,10 @@ console.log('🖥️ [Server] Page accessed for shop:', shop);
 let data = null;
 let error = null;
 
+const apiBaseUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+
 try {
-  const res = await fetch(`http://localhost:5000/api/v1/shop/${shop}`);
+  const res = await fetch(`${apiBaseUrl}/shop/${shop}`);
 
   if (!res.ok) {
     throw new Error("Shop not found");

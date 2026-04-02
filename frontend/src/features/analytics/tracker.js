@@ -11,34 +11,39 @@ class AnalyticsTracker {
   }
 
   getApiBaseUrl() {
-    // Try to get from window config first
+    const envUrl = typeof import.meta !== 'undefined' ? import.meta.env.PUBLIC_API_URL : undefined;
+
+    // Prefer explicit public env var set for both desktop and mobile
+    if (envUrl) {
+      console.log('🌐 [Tracker] Using PUBLIC_API_URL from env:', envUrl);
+      return envUrl;
+    }
+
+    // Preserve old global override path if set
     if (typeof window !== 'undefined' && window.PUBLIC_API_URL) {
       console.log('🌐 [Tracker] Using PUBLIC_API_URL from window:', window.PUBLIC_API_URL);
       return window.PUBLIC_API_URL;
     }
-    
-    // Try to detect from current location if in browser
+
     if (typeof window !== 'undefined') {
       const protocol = window.location.protocol;
       const hostname = window.location.hostname;
       const port = window.location.port;
-      
+
       console.log('🌐 [Tracker] Current location:', { protocol, hostname, port });
-      
-      // If localhost, try localhost:5000; otherwise use same host
+
       if (hostname === 'localhost' || hostname === '127.0.0.1') {
         const url = `${protocol}//localhost:5000/api/v1`;
         console.log('🌐 [Tracker] Using localhost URL:', url);
         return url;
       }
-      
-      // For phone/other devices, use current host with port 5000
+
       const url = `${protocol}//${hostname}:5000/api/v1`;
       console.log('🌐 [Tracker] Using network URL:', url);
       return url;
     }
-    
-    console.log('🌐 [Tracker] Using default URL: http://localhost:5000/api/v1');
+
+    console.log('🌐 [Tracker] Using fallback URL: http://localhost:5000/api/v1');
     return 'http://localhost:5000/api/v1';
   }
 
