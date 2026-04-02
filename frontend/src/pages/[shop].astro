@@ -482,9 +482,10 @@ try {
         shopName: data?.shop_name ?? "",
         error: error ?? null,
         shopUsername: shop ?? "",
+        apiBaseUrl: apiBaseUrl,
       }}
     >
-      window.__MENU_DATA__ = { pdfUrl, shopName, error, shopUsername };
+      window.__MENU_DATA__ = { pdfUrl, shopName, error, shopUsername, apiBaseUrl };
 
       // Inline Analytics Tracker
       class AnalyticsTrackerInline {
@@ -498,31 +499,24 @@ try {
         }
 
         getApiBaseUrl() {
-          // 1) explicit env variable from Vite/Astro
-          const envUrl = import.meta.env.PUBLIC_API_URL || window.PUBLIC_API_URL;
-          if (envUrl) {
-            return envUrl;
+          // Use server-computed apiBaseUrl from define:vars
+          if (this.apiBaseUrl) {
+            return this.apiBaseUrl;
           }
 
-          // 2) legacy global path
-          if (typeof window !== 'undefined' && window.PUBLIC_API_URL) {
-            return window.PUBLIC_API_URL;
-          }
-
-          // 3) local dev
-          const protocol = window.location.protocol;
+          // Fallback: hardcoded production and dev URLs
           const hostname = window.location.hostname;
-
-          if (hostname === 'localhost' || hostname === '127.0.0.1') {
-            return `${protocol}//localhost:5000/api/v1`;
-          }
-
-          // 4) production: frontend host -> backend host
+          
           if (hostname.includes('epatri.vercel.app')) {
             return 'https://epatri-be.vercel.app/api/v1';
           }
+          
+          if (hostname === 'localhost' || hostname === '127.0.0.1') {
+            return 'http://localhost:5000/api/v1';
+          }
 
-          // 5) generic fallback for same host path
+          // Last resort: same host with /api/v1
+          const protocol = window.location.protocol;
           return `${protocol}//${hostname}/api/v1`;
         }
 
