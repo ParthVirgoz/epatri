@@ -6,7 +6,7 @@ export async function securityPlugin(fastify) {
 
     // Get allowed origins from environment or use defaults
     const allowedOrigins = process.env.ALLOWED_ORIGINS 
-      ? process.env.ALLOWED_ORIGINS.split(',')
+      ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
       : [
           'http://localhost:3000',
           'http://localhost:4321',
@@ -14,7 +14,11 @@ export async function securityPlugin(fastify) {
           'http://127.0.0.1:3000',
           'http://127.0.0.1:4321',
           'http://127.0.0.1:5173',
+          'https://epatri.vercel.app',
         ];
+
+    // Allow Vercel production domain
+    const allowedVercelDomains = ['https://epatri.vercel.app', 'https://epatri-be.vercel.app'];
 
     // Allow local network hosts like astro --host usage
     const allowedLocalHostPrefixes = ['http://192.168.', 'http://10.', 'http://172.'];
@@ -30,6 +34,11 @@ export async function securityPlugin(fastify) {
             
             // Allow all localhost variations in development
             if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+                return callback(null, true);
+            }
+
+            // Allow production Vercel domains
+            if (allowedVercelDomains.includes(origin)) {
                 return callback(null, true);
             }
 
