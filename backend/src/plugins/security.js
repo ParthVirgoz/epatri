@@ -34,24 +34,7 @@ export async function securityPlugin(fastify) {
     };
 
     const corsOptions = {
-        origin: (origin, cb) => {
-            if (!origin) {
-                // Allow server-to-server or tools without origin (curl, postman).
-                return cb(null, true);
-            }
-
-            if (process.env.NODE_ENV !== 'production') {
-                return cb(null, true);
-            }
-
-            if (allowedOrigins.includes('*') || allowedOrigins.includes(origin) || isLocalOrigin(origin) || isVercelOrigin(origin)) {
-                return cb(null, true);
-            }
-
-            const error = new Error(`CORS blocked for origin: ${origin}`);
-            error.status = 403;
-            return cb(error);
-        },
+        origin: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
         exposedHeaders: ['Content-Length', 'X-Kuma-Revision'],
@@ -59,10 +42,7 @@ export async function securityPlugin(fastify) {
         maxAge: 86400,
     };
 
-    console.log('🔐 [CORS] Registering with options:', {
-        ...corsOptions,
-        origin: allowedOrigins.includes('*') ? true : allowedOrigins,
-    });
+    console.log('🔐 [CORS] Registering open mode (origin: true)');
 
     await fastify.register(cors, corsOptions);
 }
