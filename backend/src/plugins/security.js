@@ -45,4 +45,17 @@ export async function securityPlugin(fastify) {
     console.log('🔐 [CORS] Registering open mode (origin: true)');
 
     await fastify.register(cors, corsOptions);
+
+    // ensure every response carries CORS headers (fallback guard)
+    fastify.addHook('onSend', async (request, reply, payload) => {
+        reply.header('Access-Control-Allow-Origin', '*');
+        reply.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
+        reply.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin');
+        reply.header('Access-Control-Allow-Credentials', 'true');
+        return payload;
+    });
+
+    fastify.options('/*', async (request, reply) => {
+        reply.code(204).send();
+    });
 }
