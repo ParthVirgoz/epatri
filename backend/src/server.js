@@ -19,6 +19,24 @@ app.get('/', async () => {
   return { message: 'API is working 🚀' };
 });
 
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('🔴 Missing Supabase environment vars. Set SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY');
+  if (process.env.NODE_ENV !== 'production') {
+    process.exit(1);
+  }
+}
+
+app.setErrorHandler((error, request, reply) => {
+  console.error('🚨 [ERROR]', request.method, request.url, error);
+  const status = error.statusCode || error.status || 500;
+  const body = {
+    statusCode: status,
+    error: error.name || 'InternalServerError',
+    message: error.message || 'Internal server error',
+  };
+  reply.status(status).send(body);
+});
+
 // register plugins
 await app.register(securityPlugin);
 await app.register(authPlugin);

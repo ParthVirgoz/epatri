@@ -18,7 +18,10 @@ export async function loginController(req, reply) {
   try {
     return await loginUser(req.server, req.body);
   } catch (err) {
-    return reply.code(400).send({ message: err.message });
+    const status = err.status || err.statusCode || 400;
+    const message = err.message || 'Login failed';
+    req.log.error('Login failed', { message, status, body: req.body });
+    return reply.code(status).send({ message });
   }
 }
 

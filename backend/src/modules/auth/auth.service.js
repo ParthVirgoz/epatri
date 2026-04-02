@@ -34,19 +34,42 @@ export async function registerUser(fastify, data) {
 
 export async function loginUser(fastify, data) {
   const { email, password } = data;
+  fastify.log.info('[loginUser] attempt', { email });
 
-  const { data: loginData, error } =
-    await fastify.supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  if (!email || !password) {
+    const err = new Error('Email and password are required');
+    err.status = 400;
+    throw err;
+  }
 
-  if (error) throw new Error(error.message);
+  try {
+    const { data: loginData, error } =
+      await fastify.supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-  return {
-    access_token: loginData.session.access_token,
-    user: loginData.user,
-  };
+    if (error) {
+      fastify.log.error('[loginUser] supabase login error', error);
+      const err = new Error(error.message || 'Login failed');
+      err.status = 401;
+      throw err;
+    }
+
+    if (!loginData?.session || !loginData?.user) {
+      const err = new Error('Login failed: invalid credentials or session');
+      err.status = 401;
+      throw err;
+    }
+
+    return {
+      access_token: loginData.session.access_token,
+      user: loginData.user,
+    };
+  } catch (err) {
+    fastify.log.error('[loginUser] exception', err);
+    throw err;
+  }
 }
 
 export async function getCurrentUser(fastify, user) {
