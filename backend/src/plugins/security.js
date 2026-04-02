@@ -9,6 +9,8 @@ export async function securityPlugin(fastify) {
     const defaultOrigins = [
         'http://localhost:5173',
         'http://localhost:3000',
+        'http://127.0.0.1:5173',
+        'http://127.0.0.1:3000',
         'https://epatri-be.vercel.app',
         'https://epatri-admin.vercel.app',
         'https://epatri.vercel.app',
@@ -20,14 +22,29 @@ export async function securityPlugin(fastify) {
     console.log('🔍 [Security] ALLOWED_ORIGINS env:', process.env.ALLOWED_ORIGINS);
     console.log('🔍 [Security] Effective allowedOrigins:', allowedOrigins);
 
+    const isLocalOrigin = (origin) => {
+        if (!origin) return true;
+        if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
+        if (/^https?:\/\/\d{1,3}(\.\d{1,3}){3}(:\d+)?$/.test(origin)) return true; // LAN IP
+        return false;
+    };
+
+    const isVercelOrigin = (origin) => {
+        return /https?:\/\/([a-zA-Z0-9-]+\.)*vercel\.app$/.test(origin);
+    };
+
     const corsOptions = {
         origin: (origin, cb) => {
             if (!origin) {
-                // Allow server-to-server or tools without origin.
+                // Allow server-to-server or tools without origin (curl, postman).
                 return cb(null, true);
             }
 
-            if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+            if (process.env.NODE_ENV !== 'production') {
+                return cb(null, true);
+            }
+
+            if (allowedOrigins.includes('*') || allowedOrigins.includes(origin) || isLocalOrigin(origin) || isVercelOrigin(origin)) {
                 return cb(null, true);
             }
 
