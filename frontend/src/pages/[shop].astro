@@ -10,7 +10,7 @@ console.log('🖥️ [Server] Page accessed for shop:', shop);
 let data = null;
 let error = null;
 
-const apiBaseUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+const apiBaseUrl = import.meta.env.PUBLIC_API_URL || (import.meta.env.MODE === 'production' ? 'https://epatri-be.vercel.app/api/v1' : 'http://localhost:5000/api/v1');
 
 try {
   const res = await fetch(`${apiBaseUrl}/shop/${shop}`);
@@ -493,13 +493,32 @@ try {
         }
 
         getApiBaseUrl() {
+          // 1) env variable (Astro PUBLIC_ gets exposed to browser)
+          const envUrl = import.meta.env.PUBLIC_API_URL;
+          if (envUrl) {
+            return envUrl;
+          }
+
+          // 2) legacy global path
+          if (typeof window !== 'undefined' && window.PUBLIC_API_URL) {
+            return window.PUBLIC_API_URL;
+          }
+
+          // 3) local dev
           const protocol = window.location.protocol;
           const hostname = window.location.hostname;
-          
+
           if (hostname === 'localhost' || hostname === '127.0.0.1') {
             return `${protocol}//localhost:5000/api/v1`;
           }
-          return `${protocol}//${hostname}:5000/api/v1`;
+
+          // 4) production: frontend host -> backend host
+          if (hostname.includes('epatri.vercel.app')) {
+            return 'https://epatri-be.vercel.app/api/v1';
+          }
+
+          // 5) generic fallback for same host path (no :5000)
+          return `${protocol}//${hostname}/api/v1`;
         }
 
         detectDeviceType() {
