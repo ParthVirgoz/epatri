@@ -1,0 +1,1089 @@
+---
+import "../styles/global.css";
+export const prerender = false;
+
+const { shop } = Astro.params;
+
+// Debug: log what shop was accessed
+console.log('🖥️ [Server] Page accessed for shop:', shop);
+
+let data = null;
+let error = null;
+
+try {
+  const res = await fetch(`http://localhost:5000/api/v1/shop/${shop}`);
+
+  if (!res.ok) {
+    throw new Error("Shop not found");
+  }
+
+  data = await res.json();
+} catch (err: any) {
+  error = err.message;
+}
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{data?.shop_name || "Menu"}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
+    ></script>
+
+    <style is:global>
+      :root {
+        --bg-color: #121316;
+        --container-bg: #1c1e24;
+        --text-color: #ffffff;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        font-family:
+          "Inter",
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ---------------------------
+      Desktop Layout Styles
+      --------------------------- */
+
+      .layout-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 40px;
+        width: 250px;
+        padding: 40px 20px 20px 0;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 30px;
+      }
+
+      .brand-name {
+        margin: 0;
+        font-size: 38px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        line-height: 1.1;
+      }
+
+      .qr-container {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .qr-code {
+        width: 150px;
+        height: 150px;
+        background-color: white;
+        padding: 10px;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      }
+
+      .qr-container p {
+        margin: 0;
+        color: #a0a4b8;
+        font-size: 14px;
+      }
+
+      .menu-container {
+        width: 100%;
+        max-width: 800px;
+        background-color: var(--container-bg);
+        min-height: 100vh;
+        padding: 40px 0 60px 0;
+        box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        /* Reduced space between images */
+      }
+
+      .menu-image-wrapper {
+        width: 100%;
+        padding: 0 30px;
+        box-sizing: border-box;
+      }
+
+      .menu-image-wrapper img {
+        width: 100%;
+        display: block;
+        border-radius: 16px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+        object-fit: contain;
+        cursor: zoom-in;
+        background-color: #2c303a;
+        min-height: 300px;
+      }
+
+      /* Loading Skeleton Animation */
+      @keyframes shine {
+        to {
+          background-position-x: -200%;
+        }
+      }
+
+      .loading-skeleton {
+        background: linear-gradient(
+          110deg,
+          #2c303a 8%,
+          #363b47 18%,
+          #2c303a 33%
+        );
+        background-size: 200% 100%;
+        animation: 1.5s shine linear infinite;
+        min-height: 300px;
+      }
+
+      /* ---------------------------
+        Desktop Modal Styles
+        --------------------------- */
+      .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.95);
+        z-index: 1000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        opacity: 0;
+        visibility: hidden;
+        transition:
+          opacity 0.3s ease,
+          visibility 0.3s ease;
+        backdrop-filter: blur(8px);
+      }
+
+      .modal.active {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .modal-content {
+        max-width: 90vw;
+        max-height: 95vh;
+        border-radius: 10px;
+        object-fit: contain;
+        transform: scale(0.95);
+        transition: transform 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+      }
+
+      .modal.active .modal-content {
+        transform: scale(1);
+      }
+
+      .close-btn {
+        position: absolute;
+        top: 20px;
+        right: 30px;
+        color: #d1d1d1;
+        font-size: 45px;
+        font-weight: 300;
+        cursor: pointer;
+        z-index: 1001;
+        transition:
+          color 0.2s,
+          transform 0.2s;
+        line-height: 1;
+      }
+
+      .close-btn:hover {
+        color: #ffffff;
+        transform: scale(1.1);
+      }
+
+      /* Modal Navigation Buttons */
+      .modal-nav-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border: none;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        font-size: 24px;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1002;
+        transition: background 0.3s ease;
+      }
+
+      .modal-nav-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      .modal-nav-prev {
+        left: 20px;
+      }
+
+      .modal-nav-next {
+        right: 20px;
+      }
+
+      /* ---------------------------
+                    Mobile App Style Wrapper 
+                    (Only active via JS when mobile is detected)
+                    --------------------------- */
+      .mobile-only-layout {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+      }
+
+      .mobile-only-layout img {
+        width: 100%;
+        display: block;
+        border-radius: 0;
+        box-shadow: none;
+        margin: 0;
+        padding: 0;
+        min-height: 300px;
+      }
+
+      /* Hide modal UI completely when loaded as mobile */
+      .mobile-hide {
+        display: none !important;
+      }
+
+      /* ---------------------------
+                    Snap Toggle & Tooltip Styles
+                    --------------------------- */
+      html.snap-active {
+        scroll-snap-type: y mandatory;
+      }
+
+      .snap-active .menu-image-wrapper,
+      .snap-active .mobile-only-layout img {
+        scroll-snap-align: center;
+        scroll-snap-stop: always;
+      }
+
+      .snap-toggle-container {
+        position: fixed;
+        top: 15px;
+        right: 15px;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 10px;
+      }
+
+      .snap-btn {
+        background: var(--container-bg);
+        color: var(--text-color);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 8px 12px;
+        border-radius: 20px;
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        transition: background 0.2s;
+        outline: none;
+      }
+
+      .snap-btn:hover {
+        background: #2a2d36;
+      }
+
+      .toggle-switch {
+        width: 32px;
+        height: 18px;
+        background: #363b47;
+        border-radius: 9px;
+        position: relative;
+        transition: background 0.3s;
+      }
+
+      .toggle-switch::after {
+        content: "";
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 14px;
+        height: 14px;
+        background: white;
+        border-radius: 50%;
+        transition: transform 0.3s;
+      }
+
+      html.snap-active #snapToggleBtn .toggle-switch,
+      html.full-height-active #fullHeightToggleBtn .toggle-switch {
+        background: #4ade80;
+        /* Nice bright green */
+      }
+
+      html.snap-active #snapToggleBtn .toggle-switch::after,
+      html.full-height-active #fullHeightToggleBtn .toggle-switch::after {
+        transform: translateX(14px);
+      }
+
+      /* Full Height Desktop Styles */
+      @media screen and (min-width: 901px) {
+        html.full-height-active .menu-container {
+          gap: 0;
+          padding: 0;
+        }
+
+        html.full-height-active .menu-image-wrapper {
+          padding: 0;
+        }
+
+        html.full-height-active .menu-image-wrapper img {
+          height: 100vh;
+          border-radius: 0;
+          box-shadow: none;
+          object-fit: contain;
+          background-color: transparent;
+        }
+      }
+
+      @media screen and (max-width: 900px) {
+        .desktop-only {
+          display: none !important;
+        }
+      }
+
+      .snap-tooltip {
+        background: #4ade80;
+        color: #121316;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        max-width: 220px;
+        position: relative;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+        transition:
+          opacity 0.3s,
+          transform 0.3s,
+          visibility 0.3s;
+      }
+
+      .snap-tooltip.show {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+      }
+
+      .snap-tooltip::after {
+        content: "";
+        position: absolute;
+        top: -6px;
+        right: 35px;
+        border-width: 0 6px 6px 6px;
+        border-style: solid;
+        border-color: transparent transparent #4ade80 transparent;
+      }
+
+      .snap-tooltip-close {
+        position: absolute;
+        top: 4px;
+        right: 6px;
+        background: none;
+        border: none;
+        color: #121316;
+        font-size: 18px;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+        font-weight: bold;
+      }
+
+      .snap-tooltip-close:hover {
+        color: #ffffff;
+      }
+
+      .snap-tooltip p {
+        margin: 0;
+        padding-right: 15px;
+        line-height: 1.4;
+      }
+    </style>
+  </head>
+
+  <body class="at-menu">
+    <div class="snap-toggle-container">
+      <button id="snapToggleBtn" class="snap-btn">
+        <span>Scroll Snap</span>
+        <div class="toggle-switch"></div>
+      </button>
+      <button id="fullHeightToggleBtn" class="snap-btn desktop-only">
+        <span>Full Height</span>
+        <div class="toggle-switch"></div>
+      </button>
+      <div id="snapTooltip" class="snap-tooltip" aria-hidden="true">
+        <button
+          id="closeTooltip"
+          class="snap-tooltip-close"
+          aria-label="Close tooltip">&times;</button
+        >
+        <p>Try Scroll Snap for perfectly aligned pages as you scroll!</p>
+      </div>
+    </div>
+
+    <div id="app-root"></div>
+
+    <script
+      define:vars={{
+        pdfUrl: data?.pdf_url ?? null,
+        shopName: data?.shop_name ?? "",
+        error: error ?? null,
+        shopUsername: shop ?? "",
+      }}
+    >
+      window.__MENU_DATA__ = { pdfUrl, shopName, error, shopUsername };
+
+      // Inline Analytics Tracker
+      class AnalyticsTrackerInline {
+        constructor() {
+          this.apiBaseUrl = this.getApiBaseUrl();
+          this.sessionId = this.generateSessionId();
+        }
+
+        generateSessionId() {
+          return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        }
+
+        getApiBaseUrl() {
+          const protocol = window.location.protocol;
+          const hostname = window.location.hostname;
+          
+          if (hostname === 'localhost' || hostname === '127.0.0.1') {
+            return `${protocol}//localhost:5000/api/v1`;
+          }
+          return `${protocol}//${hostname}:5000/api/v1`;
+        }
+
+        detectDeviceType() {
+          const ua = navigator.userAgent.toLowerCase();
+          if (/ipad|android(?!.*mobile)/.test(ua)) return 'tablet';
+          if (/mobile|android|iphone|ipod|webos|blackberry|iemobile/.test(ua)) return 'mobile';
+          return 'desktop';
+        }
+
+        getDeviceInfo() {
+          return {
+            user_agent: navigator.userAgent,
+            device_type: this.detectDeviceType(),
+            referrer: document.referrer || null,
+            session_id: this.sessionId,
+          };
+        }
+
+        async getIpLocationData() {
+          try {
+            const response = await fetch('https://ipapi.co/json/');
+            if (response.ok) {
+              const data = await response.json();
+              return {
+                country: data.country_name,
+                region: data.region,
+                ip_address: data.ip,
+              };
+            }
+          } catch (err) {
+            console.warn('Could not fetch IP location:', err);
+          }
+          return { country: null, region: null, ip_address: null };
+        }
+
+        async getGeolocationData() {
+          return new Promise((resolve) => {
+            if (navigator.geolocation) {
+              navigator.geolocation.getCurrentPosition(
+                (position) => {
+                  resolve({
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                  });
+                },
+                () => {
+                  resolve({ latitude: null, longitude: null });
+                }
+              );
+            } else {
+              resolve({ latitude: null, longitude: null });
+            }
+          });
+        }
+
+        async trackMenuView(shopUsername) {
+          try {
+            console.log('📡 [Tracker] Starting track for:', shopUsername);
+            
+            const deviceInfo = this.getDeviceInfo();
+            console.log('📱 [Tracker] Device info:', deviceInfo);
+            
+            const locData = await this.getIpLocationData();
+            console.log('🌍 [Tracker] Location:', locData);
+            
+            const geoData = await this.getGeolocationData();
+            console.log('📍 [Tracker] Geo:', geoData);
+
+            const payload = { ...deviceInfo, ...locData, ...geoData };
+
+            const endpoint = `${this.apiBaseUrl}/analytics/shop/${shopUsername}/track`;
+            console.log('📡 [Tracker] Sending to:', endpoint);
+
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+              mode: 'cors',
+            });
+
+            console.log('📊 [Tracker] Response:', response.status);
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error('❌ [Tracker] Error:', response.status, errorText);
+              return null;
+            }
+
+            const result = await response.json();
+            console.log('✅ [Tracker] Success!');
+            return result;
+          } catch (err) {
+            console.error('❌ [Tracker] Exception:', err.message);
+            return null;
+          }
+        }
+
+        saveSessionData(shopUsername, data) {
+          try {
+            const sessionData = {
+              shop: shopUsername,
+              sessionId: this.sessionId,
+              startTime: Date.now(),
+              ...data,
+            };
+            sessionStorage.setItem('analyticsSession', JSON.stringify(sessionData));
+          } catch (err) {
+            console.warn('Could not save session:', err);
+          }
+        }
+      }
+
+      // Initialize analytics tracking
+      async function initializeAnalytics() {
+        const shopUsername = window.__MENU_DATA__.shopUsername;
+        console.log('🎯 [Init] Starting analytics for shop:', shopUsername);
+        
+        if (!shopUsername) {
+          console.warn('⚠️ [Init] No shop username!');
+          return;
+        }
+
+        try {
+          const tracker = new AnalyticsTrackerInline();
+          console.log('✅ [Init] Tracker created');
+          
+          const result = await tracker.trackMenuView(shopUsername);
+          console.log('✅ [Init] Tracking complete:', result ? 'success' : 'failed');
+
+          tracker.saveSessionData(shopUsername, { menuAccessed: true });
+          console.log('✅ [Init] Session saved');
+        } catch (err) {
+          console.error('❌ [Init] Error:', err.message);
+        }
+      }
+
+      // Run analytics
+      console.log('📍 [Init] DOM state:', document.readyState);
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeAnalytics);
+      } else {
+        initializeAnalytics();
+      }
+    </script>
+
+    <script>
+      // Capture console for debugging locally
+      const logs = [];
+      const originalLog = console.log;
+      const originalError = console.error;
+      
+      console.log = function(...args) {
+        originalLog.apply(console, args);
+        logs.push(args);
+      };
+      
+      console.error = function(...args) {
+        originalError.apply(console, args);
+        logs.push(['ERROR:', ...args]);
+      };
+      
+      // Expose logs to window for debugging
+      window.__LOGS__ = logs;
+      
+      console.log('🎯 [Debug] Page script started');
+    </script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", async () => {
+        const { pdfUrl, shopName, error } = window.__MENU_DATA__;
+        const appRoot = document.getElementById("app-root");
+
+        // Scroll Snap logic
+        const snapBtn = document.getElementById("snapToggleBtn");
+        const snapTooltip = document.getElementById("snapTooltip");
+        const closeTooltip = document.getElementById("closeTooltip");
+
+        const snapFeatureSeen = localStorage.getItem("snapFeatureSeen");
+
+        if (!snapFeatureSeen) {
+          setTimeout(() => {
+            if (snapTooltip) snapTooltip.classList.add("show");
+          }, 2000);
+        }
+
+        const hideTooltip = () => {
+          if (snapTooltip) snapTooltip.classList.remove("show");
+          localStorage.setItem("snapFeatureSeen", "true");
+        };
+
+        if (closeTooltip) closeTooltip.addEventListener("click", hideTooltip);
+
+        if (snapBtn)
+          snapBtn.addEventListener("click", () => {
+            document.documentElement.classList.toggle("snap-active");
+            if (snapTooltip && snapTooltip.classList.contains("show")) {
+              hideTooltip();
+            } else {
+              localStorage.setItem("snapFeatureSeen", "true");
+            }
+          });
+
+        // Full Height logic (desktop only)
+        const fullHeightBtn = document.getElementById("fullHeightToggleBtn");
+        if (fullHeightBtn)
+          fullHeightBtn.addEventListener("click", () => {
+            document.documentElement.classList.toggle("full-height-active");
+          });
+
+        // Check if user is on a mobile-sized screen
+        const isMobile = window.matchMedia("(max-width: 900px)").matches;
+
+        // Basic loading skeleton text while processing PDF
+        appRoot.innerHTML =
+          '<div style="display:flex;justify-content:center;align-items:center;height:80vh;color:#a0a4b8;font-size:24px;">Loading Document...</div>';
+
+        if (!pdfUrl) {
+          appRoot.innerHTML = `
+          <div style="display:flex;justify-content:center;align-items:center;height:80vh;color:#ff4444;font-size:24px;">
+              No menu available
+          </div>`;
+          return;
+        }
+
+        const pdfjsLib = window["pdfjs-dist/build/pdf"];
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+        const renderPageToDataURL = async (pdf, pageNumber, scale = 2) => {
+          const page = await pdf.getPage(pageNumber);
+          const viewport = page.getViewport({ scale: scale });
+          const canvas = document.createElement("canvas");
+          const context = canvas.getContext("2d");
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+          await page.render({ canvasContext: context, viewport: viewport })
+            .promise;
+          return canvas.toDataURL("image/jpeg", 0.8);
+        };
+
+        try {
+          const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+          const totalPages = pdf.numPages;
+          const placeholderSvg =
+            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1.414'%3E%3C/svg%3E";
+
+          if (isMobile) {
+            // Mobile flow
+            appRoot.innerHTML = "";
+            const wrapper = document.createElement("div");
+            wrapper.className = "mobile-only-layout";
+            const imgElements = [];
+
+            for (let i = 1; i <= totalPages; i++) {
+              const img = document.createElement("img");
+              img.className = "loading-skeleton";
+              img.src = placeholderSvg;
+              wrapper.appendChild(img);
+              imgElements.push(img);
+            }
+            appRoot.appendChild(wrapper);
+
+            // Intersection Observer for Lazy Loading
+            const renderedPages = new Set();
+            const renderQueue = new Set();
+            let isRendering = false;
+
+            const processQueue = async () => {
+              if (isRendering || renderQueue.size === 0) return;
+              isRendering = true;
+
+              // Prioritize based on what was added to the queue first (what user scrolled to)
+              const iterator = renderQueue.values();
+              const pageToRender = iterator.next().value;
+              renderQueue.delete(pageToRender);
+              renderedPages.add(pageToRender);
+
+              try {
+                const dataUrl = await renderPageToDataURL(
+                  pdf,
+                  pageToRender,
+                  1.5,
+                );
+                imgElements[pageToRender - 1].src = dataUrl;
+                imgElements[pageToRender - 1].classList.remove(
+                  "loading-skeleton",
+                );
+              } catch (error) {
+                console.error(`Error rendering page ${pageToRender}:`, error);
+                renderedPages.delete(pageToRender); // Allow retry if needed
+              }
+
+              isRendering = false;
+              processQueue(); // Check if more were added while rendering
+            };
+
+            const observer = new IntersectionObserver(
+              (entries) => {
+                entries.forEach((entry) => {
+                  if (entry.isIntersecting) {
+                    const pageNum = parseInt(entry.target.dataset.page);
+
+                    // Prioritize the currently visible page
+                    if (!renderedPages.has(pageNum)) {
+                      // Add to front of queue conceptually by adding it first, then others
+                      if (renderQueue.has(pageNum)) renderQueue.delete(pageNum);
+                      const queueArray = Array.from(renderQueue);
+                      renderQueue.clear();
+                      renderQueue.add(pageNum);
+                      queueArray.forEach((p) => renderQueue.add(p));
+                      processQueue();
+                    }
+
+                    // Pre-load next and previous pages if possible
+                    if (pageNum < totalPages && !renderedPages.has(pageNum + 1))
+                      renderQueue.add(pageNum + 1);
+                    if (pageNum > 1 && !renderedPages.has(pageNum - 1))
+                      renderQueue.add(pageNum - 1);
+                    processQueue();
+                  }
+                });
+              },
+              {
+                rootMargin: "100% 0px", // Load comfortably ahead
+                threshold: 0.1,
+              },
+            );
+
+            // Add observer to elements
+            imgElements.forEach((img, index) => {
+              img.dataset.page = index + 1;
+              observer.observe(img);
+            });
+          } else {
+            // Desktop flow
+            const brandName = shopName;
+            const desktopHTML = `
+                    <div class="layout-wrapper">
+                        <div class="sidebar">
+                            <h1 class="brand-name" style="font-size: 32px;">${brandName}</h1>
+                            <div class="qr-container">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}" alt="QR Code" class="qr-code">
+                                <p>Scan to view on your phone</p>
+                            </div>
+                        </div>
+                        <div class="menu-container" id="image-list"></div>
+                    </div>
+
+                    <!-- Zoom Preview Modal -->
+                    <div class="modal" id="imageModal" aria-hidden="true">
+                        <span class="close-btn" id="closeModal" aria-label="Close Preview">&times;</span>
+                        <button class="modal-nav-btn modal-nav-prev" id="prevBtn" aria-label="Previous image">&#10094;</button>
+                        <img class="modal-content" id="zoomedImage" src="" alt="Zoomed Menu Page">
+                        <button class="modal-nav-btn modal-nav-next" id="nextBtn" aria-label="Next image">&#10095;</button>
+                    </div>
+                `;
+
+            appRoot.innerHTML = desktopHTML;
+            const container = document.getElementById("image-list");
+            const menuImages = []; // keep track of all desktop images for Prev/Next logic
+
+            // Generate skeletons
+            for (let i = 1; i <= totalPages; i++) {
+              const wrapper = document.createElement("div");
+              wrapper.className = "menu-image-wrapper";
+
+              const img = document.createElement("img");
+              img.className = "loading-skeleton";
+              img.src = placeholderSvg;
+              // Custom attribute to track index
+              img.dataset.index = i - 1;
+
+              wrapper.appendChild(img);
+              container.appendChild(wrapper);
+              menuImages.push(img);
+            }
+
+            // Intersection Observer for Lazy Loading
+            const renderedPages = new Set();
+            const renderQueue = new Set();
+            let isRendering = false;
+
+            const processQueue = async () => {
+              if (isRendering || renderQueue.size === 0) return;
+              isRendering = true;
+
+              // Prioritize based on what was added to the queue first (what user scrolled to)
+              const iterator = renderQueue.values();
+              const pageToRender = iterator.next().value;
+              renderQueue.delete(pageToRender);
+              renderedPages.add(pageToRender);
+
+              try {
+                // Desktop uses scale 2 for high zoom quality
+                const dataUrl = await renderPageToDataURL(pdf, pageToRender, 2);
+                menuImages[pageToRender - 1].src = dataUrl;
+                menuImages[pageToRender - 1].classList.remove(
+                  "loading-skeleton",
+                );
+              } catch (error) {
+                console.error(`Error rendering page ${pageToRender}:`, error);
+                renderedPages.delete(pageToRender);
+              }
+
+              isRendering = false;
+              processQueue();
+            };
+
+            const observer = new IntersectionObserver(
+              (entries) => {
+                entries.forEach((entry) => {
+                  if (entry.isIntersecting) {
+                    const pageNum = parseInt(entry.target.dataset.page);
+
+                    // Prioritize the currently visible page
+                    if (!renderedPages.has(pageNum)) {
+                      // Add to front of queue conceptually by adding it first, then others
+                      if (renderQueue.has(pageNum)) renderQueue.delete(pageNum);
+                      const queueArray = Array.from(renderQueue);
+                      renderQueue.clear();
+                      renderQueue.add(pageNum);
+                      queueArray.forEach((p) => renderQueue.add(p));
+                      processQueue();
+                    }
+
+                    // Pre-load nearby pages
+                    if (pageNum < totalPages && !renderedPages.has(pageNum + 1))
+                      renderQueue.add(pageNum + 1);
+                    if (pageNum > 1 && !renderedPages.has(pageNum - 1))
+                      renderQueue.add(pageNum - 1);
+                    processQueue();
+                  }
+                });
+              },
+              {
+                rootMargin: "100% 0px", // Load ahead of scroll
+                threshold: 0.1,
+              },
+            );
+
+            // Add observer to elements
+            menuImages.forEach((img, index) => {
+              img.dataset.page = index + 1;
+              observer.observe(img);
+            });
+
+            // 3. Modal & Navigation Logic
+            const modal = document.getElementById("imageModal");
+            const zoomedImage = document.getElementById("zoomedImage");
+            const closeModal = document.getElementById("closeModal");
+            const nextBtn = document.getElementById("nextBtn");
+            const prevBtn = document.getElementById("prevBtn");
+
+            let currentIndex = 0;
+
+            const updateModalImage = (index) => {
+              const targetImg = menuImages[index];
+              zoomedImage.src = targetImg.src;
+              zoomedImage.alt = targetImg.alt || `Menu Page ${index + 1}`;
+
+              // Preload the background scrolling by scrolling the original image into view
+              targetImg.scrollIntoView({ behavior: "auto", block: "center" });
+            };
+
+            const openModal = (index) => {
+              currentIndex = parseInt(index);
+              updateModalImage(currentIndex);
+              modal.classList.add("active");
+              document.body.style.overflow = "hidden";
+            };
+
+            const close = () => {
+              modal.classList.remove("active");
+              document.body.style.overflow = "";
+              setTimeout(() => {
+                if (!modal.classList.contains("active")) {
+                  zoomedImage.src = "";
+                }
+              }, 300);
+            };
+
+            // Click image to open
+            container.addEventListener("click", (e) => {
+              if (
+                e.target.tagName === "IMG" &&
+                !e.target.classList.contains("loading-skeleton")
+              ) {
+                openModal(e.target.dataset.index);
+              }
+            });
+
+            // Next / Prev button logic
+            nextBtn.addEventListener("click", (e) => {
+              e.stopPropagation(); // prevent modal background click
+              if (currentIndex < totalPages - 1) {
+                currentIndex++;
+                updateModalImage(currentIndex);
+              }
+            });
+
+            prevBtn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              if (currentIndex > 0) {
+                currentIndex--;
+                updateModalImage(currentIndex);
+              }
+            });
+
+            // Close interactions
+            closeModal.addEventListener("click", close);
+
+            modal.addEventListener("click", (e) => {
+              // Tap anywhere except the image and nav buttons to close
+              if (e.target === modal) {
+                close();
+              }
+            });
+
+            document.addEventListener("keydown", (e) => {
+              if (modal.classList.contains("active")) {
+                if (e.key === "Escape") close();
+                if (e.key === "ArrowRight") nextBtn.click();
+                if (e.key === "ArrowLeft") prevBtn.click();
+              }
+            });
+          }
+        } catch (error) {
+          console.error("Error rendering PDF:", error);
+          appRoot.innerHTML =
+            '<div style="display:flex;justify-content:center;align-items:center;height:80vh;color:#ff4444;font-size:24px;">Failed to load PDF document. Please make sure the file exists.</div>';
+        }
+      });
+
+      // ----------------------------------------------------
+      // BASIC CODE PROTECTION (ANTI-INSPECT)
+      // ----------------------------------------------------
+
+      // Disable Right Click
+      document.addEventListener("contextmenu", (event) =>
+        event.preventDefault(),
+      );
+
+      // Disable Common Developer Shortcut Keys
+      document.onkeydown = function (e) {
+        // F12
+        if (e.key === "F12") {
+          return false;
+        }
+        // Ctrl+Shift+I (Inspect)
+        if (e.ctrlKey && e.shiftKey && e.key === "I") {
+          return false;
+        }
+        // Ctrl+Shift+J (Console)
+        if (e.ctrlKey && e.shiftKey && e.key === "J") {
+          return false;
+        }
+        // Ctrl+Shift+C (Element selection)
+        if (e.ctrlKey && e.shiftKey && e.key === "C") {
+          return false;
+        }
+        // Ctrl+U (View Source)
+        if (e.ctrlKey && e.key === "U") {
+          return false;
+        }
+      };
+
+      // Smoother DevTools Defense (Dimension & Performance Check)
+      const devtools = function () {};
+      devtools.toString = function () {
+        this.opened = true;
+      };
+
+      setInterval(function () {
+        const widthThreshold = window.outerWidth - window.innerWidth > 160;
+        const heightThreshold = window.outerHeight - window.innerHeight > 160;
+
+        if (widthThreshold || heightThreshold) {
+          // Completely erase the content so they can't examine the DOM
+          document.body.innerHTML = `
+                    <div style="display:flex; justify-content:center; align-items:center; height:100vh; background:#121316; color:white; font-family:sans-serif; flex-direction:column;">
+                        <h2>Developer Tools Detected</h2>
+                        <p>Please close the inspector to view this website.</p>
+                    </div>
+                `;
+        }
+      }, 500);
+    </script>
+  </body>
+</html>
