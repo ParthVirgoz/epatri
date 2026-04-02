@@ -38,8 +38,16 @@ class AnalyticsTracker {
         return url;
       }
 
-      const url = `${protocol}//${hostname}:5000/api/v1`;
-      console.log('🌐 [Tracker] Using network URL:', url);
+      // Production fallback for deployed frontend host
+      if (hostname.includes('epatri.vercel.app')) {
+        const url = 'https://epatri-be.vercel.app/api/v1';
+        console.log('🌐 [Tracker] Using prod backend URL:', url);
+        return url;
+      }
+
+      // If explicit API URL is not configured, try same host path as last resort
+      const url = `${protocol}//${hostname}/api/v1`;
+      console.log('🌐 [Tracker] Using inferred host URL:', url);
       return url;
     }
 
