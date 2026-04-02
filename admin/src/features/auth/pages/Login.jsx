@@ -11,6 +11,7 @@ export default function Login() {
         email: "",
         password: "",
     });
+    const [apiError, setApiError] = useState(null);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -18,10 +19,11 @@ export default function Login() {
         const [data, error] = await loginApi(form);
 
         if (error) {
-            alert(error);
+            setApiError(error);
             return;
         }
 
+        setApiError(null);
         login(data);
         navigate("/dashboard");
     };
@@ -40,6 +42,12 @@ export default function Login() {
                     className="max-w-md w-full mx-auto space-y-6"
                 >
                     <h2 className="text-2xl font-semibold">Welcome back</h2>
+
+                    {apiError && (
+                        <div className="text-red-600 bg-red-100 p-2 rounded-md mb-2" role="alert">
+                            {apiError}
+                        </div>
+                    )}
 
                     <input
                         className="w-full border p-3 rounded-xl"

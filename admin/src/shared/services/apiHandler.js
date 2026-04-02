@@ -3,9 +3,25 @@ export const handleApi = async (apiCall) => {
     const { data } = await apiCall;
     return [data, null];
   } catch (error) {
-    const message =
-      error.response?.data?.message || "Something went wrong";
+    const status = error.response?.status;
+    const serverMessage =
+      error.response?.data?.message ||
+      error.response?.data?.error ||
+      error.response?.data ||
+      null;
 
-    return [null, message];
+    const message =
+      serverMessage ||
+      (error.message ? `${error.message}` : null) ||
+      "Something went wrong";
+
+    const humanMessage =
+      status && serverMessage
+        ? `Error ${status}: ${message}`
+        : status
+        ? `Error ${status}: ${message}`
+        : message;
+
+    return [null, humanMessage];
   }
 };
