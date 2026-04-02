@@ -12,8 +12,8 @@ let error = null;
 
 // Prefer explicit env variable (Astro/Vite) first.
 const apiBaseUrl =
-  (typeof import.meta !== 'undefined' && import.meta.env?.PUBLIC_API_URL) ||
-  (typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'production'
+  import.meta.env.PUBLIC_API_URL ||
+  (import.meta.env.MODE === 'production'
     ? 'https://epatri-be.vercel.app/api/v1'
     : 'http://localhost:5000/api/v1');
 
@@ -499,9 +499,7 @@ try {
 
         getApiBaseUrl() {
           // 1) explicit env variable from Vite/Astro
-          const envUrl =
-            (typeof import.meta !== 'undefined' && import.meta.env?.PUBLIC_API_URL) ||
-            (typeof window !== 'undefined' && window.PUBLIC_API_URL);
+          const envUrl = import.meta.env.PUBLIC_API_URL || window.PUBLIC_API_URL;
           if (envUrl) {
             return envUrl;
           }
