@@ -486,6 +486,7 @@ try {
       }}
     >
       window.__MENU_DATA__ = { pdfUrl, shopName, error, shopUsername, apiBaseUrl };
+      console.log('🌐 [Tracker] initial API base URL', apiBaseUrl);
 
       // Inline Analytics Tracker
       class AnalyticsTrackerInline {
@@ -499,23 +500,32 @@ try {
         }
 
         getApiBaseUrl() {
-          // Use server-computed apiBaseUrl from define:vars
+          // 1) server-provided (Astro define:vars)
           if (this.apiBaseUrl) {
+            console.log('🌐 [Tracker] getApiBaseUrl: from this.apiBaseUrl', this.apiBaseUrl);
             return this.apiBaseUrl;
           }
 
-          // Fallback: hardcoded production and dev URLs
+          // 2) explicit env workaround
+          if (window.__MENU_DATA__?.apiBaseUrl) {
+            console.log('🌐 [Tracker] getApiBaseUrl: from MENU_DATA', window.__MENU_DATA__.apiBaseUrl);
+            return window.__MENU_DATA__.apiBaseUrl;
+          }
+
           const hostname = window.location.hostname;
-          
+          console.log('🌐 [Tracker] getApiBaseUrl: hostname fallback', hostname);
+
+          // 3) production explicit
           if (hostname.includes('epatri.vercel.app')) {
             return 'https://epatri-be.vercel.app/api/v1';
           }
-          
+
+          // 4) local dev
           if (hostname === 'localhost' || hostname === '127.0.0.1') {
             return 'http://localhost:5000/api/v1';
           }
 
-          // Last resort: same host with /api/v1
+          // 5) last resort
           const protocol = window.location.protocol;
           return `${protocol}//${hostname}/api/v1`;
         }
@@ -593,9 +603,12 @@ try {
 
             const response = await fetch(endpoint, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+              },
               body: JSON.stringify(payload),
-              mode: 'cors',
+              // no need for extra mode; default is cors for cross-origin
             });
 
             console.log('📊 [Tracker] Response:', response.status);
