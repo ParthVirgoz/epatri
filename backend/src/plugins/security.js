@@ -1,5 +1,4 @@
 import helmet from '@fastify/helmet';
-import cors from '@fastify/cors';
 
 export async function securityPlugin(fastify) {
     await fastify.register(helmet, {
@@ -33,18 +32,7 @@ export async function securityPlugin(fastify) {
         return /https?:\/\/([a-zA-Z0-9-]+\.)*vercel\.app$/.test(origin);
     };
 
-    const corsOptions = {
-        origin: true,
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-        exposedHeaders: ['Content-Length', 'X-Kuma-Revision'],
-        credentials: true,
-        maxAge: 86400,
-    };
-
     console.log('🔐 [CORS] Registering open mode (origin: true)');
-
-    await fastify.register(cors, corsOptions);
 
     // ensure every response carries CORS headers (fallback guard)
     fastify.addHook('onSend', async (request, reply, payload) => {
@@ -56,6 +44,11 @@ export async function securityPlugin(fastify) {
     });
 
     fastify.options('/*', async (request, reply) => {
+        reply.header('Access-Control-Allow-Origin', '*');
+        reply.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
+        reply.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin');
+        reply.header('Access-Control-Allow-Credentials', 'true');
         reply.code(204).send();
     });
 }
+
