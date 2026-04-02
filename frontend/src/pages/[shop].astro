@@ -10,7 +10,13 @@ console.log('🖥️ [Server] Page accessed for shop:', shop);
 let data = null;
 let error = null;
 
-const apiBaseUrl = import.meta.env.PUBLIC_API_URL || (import.meta.env.MODE === 'production' ? 'https://epatri-be.vercel.app/api/v1' : 'http://localhost:5000/api/v1');
+// Prefer explicit Astro env var (server side) then client env.
+const apiBaseUrl =
+  (typeof Astro !== 'undefined' && Astro.env?.PUBLIC_API_URL) ||
+  (typeof import.meta !== 'undefined' && import.meta.env?.PUBLIC_API_URL) ||
+  (typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'production'
+    ? 'https://epatri-be.vercel.app/api/v1'
+    : 'http://localhost:5000/api/v1');
 
 try {
   const res = await fetch(`${apiBaseUrl}/shop/${shop}`);
@@ -483,8 +489,8 @@ try {
 
       // Inline Analytics Tracker
       class AnalyticsTrackerInline {
-        constructor() {
-          this.apiBaseUrl = this.getApiBaseUrl();
+        constructor(apiBaseUrl = null) {
+          this.apiBaseUrl = apiBaseUrl || this.getApiBaseUrl();
           this.sessionId = this.generateSessionId();
         }
 
@@ -493,8 +499,10 @@ try {
         }
 
         getApiBaseUrl() {
-          // 1) env variable (Astro PUBLIC_ gets exposed to browser)
-          const envUrl = import.meta.env.PUBLIC_API_URL;
+          // 1) explicit env variable from Astro/client
+          const envUrl =
+            (typeof Astro !== 'undefined' && Astro.env?.PUBLIC_API_URL) ||
+            (typeof import.meta !== 'undefined' && import.meta.env?.PUBLIC_API_URL);
           if (envUrl) {
             return envUrl;
           }
@@ -517,7 +525,7 @@ try {
             return 'https://epatri-be.vercel.app/api/v1';
           }
 
-          // 5) generic fallback for same host path (no :5000)
+          // 5) generic fallback for same host path
           return `${protocol}//${hostname}/api/v1`;
         }
 
@@ -642,8 +650,8 @@ try {
         }
 
         try {
-          const tracker = new AnalyticsTrackerInline();
-          console.log('✅ [Init] Tracker created');
+          const tracker = new AnalyticsTrackerInline(apiBaseUrl);
+          console.log('✅ [Init] Tracker created with apiBase:', apiBaseUrl);
           
           const result = await tracker.trackMenuView(shopUsername);
           console.log('✅ [Init] Tracking complete:', result ? 'success' : 'failed');
