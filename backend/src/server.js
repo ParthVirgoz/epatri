@@ -5,9 +5,26 @@ import { securityPlugin } from './plugins/security.js';
 import authPlugin from './plugins/auth.js';
 import { v1Routes } from './routes/v1.js';
 import multipart from '@fastify/multipart';
+import { isOriginAllowed } from './config/corsAllowlist.js';
 
 const app = Fastify({
   trustProxy: true
+});
+
+// Register first so this `onSend` runs *last* (Fastify invokes onSend in reverse registration order).
+app.addHook('onSend', (request, reply, payload, done) => {
+  const raw =
+    request.headers.origin ?? request.raw?.headers?.origin ?? request.raw?.headers?.Origin;
+  const allowed = isOriginAllowed(raw);
+  if (allowed && !reply.getHeader('access-control-allow-origin')) {
+    reply.header('Access-Control-Allow-Origin', allowed);
+    const vary = reply.getHeader('vary');
+    if (!vary) reply.header('Vary', 'Origin');
+    else if (typeof vary === 'string' && !vary.toLowerCase().includes('origin')) {
+      reply.header('Vary', `${vary}, Origin`);
+    }
+  }
+  done(null, payload);
 });
 
 // decorators
@@ -44,9 +61,6 @@ await app.register(multipart, {
   limits: { fileSize: 5 * 1024 * 1024 }
 });
 await app.register(v1Routes, { prefix: '/api/v1' });
-
-// CORS is handled by @fastify/cors in securityPlugin (allowlist). Do not set
-// Access-Control-Allow-Origin: * together with credentials — browsers reject it.
 
 // prepare app (IMPORTANT)
 await app.ready();
