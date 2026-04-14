@@ -67,6 +67,20 @@ if (!VERCEl_ENV) {
 }
 
 // ✅ EXPORT handler (this is what Vercel needs)
+// Wait until Node finishes the response — otherwise the serverless invocation can end before CORS
+// (and other) headers are flushed, which browsers report as a CORS failure even when the API returned 200.
 export default async function handler(req, res) {
-  app.server.emit('request', req, res);
+  await new Promise((resolve, reject) => {
+    const done = () => resolve();
+    res.once('finish', done);
+    res.once('close', done);
+    res.once('error', reject);
+    try {
+      app.server.emit('request', req, res);
+    } catch (err) {
+      res.off('finish', done);
+      res.off('close', done);
+      reject(err);
+    }
+  });
 }
