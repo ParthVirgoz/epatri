@@ -1,32 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { uploadMenuApi } from "./menu.api";
 import { useAuthStore } from "../../auth/auth.store";
-
-/** Cache-bust + fit width in common embedded PDF viewers (reduces nested horizontal scroll). */
-function pdfIframeSrc(url, rev) {
-  if (!url) return "";
-  try {
-    const u = new URL(url);
-    u.searchParams.set("v", String(rev));
-    u.hash = "view=FitH";
-    return u.toString();
-  } catch {
-    const sep = url.includes("?") ? "&" : "?";
-    return `${url}${sep}v=${rev}#view=FitH`;
-  }
-}
-
-function pdfBlobPreviewSrc(blobUrl) {
-  if (!blobUrl) return "";
-  return `${blobUrl}#view=FitH`;
-}
+import PdfCanvasPreview from "../../../components/PdfCanvasPreview";
 
 export default function MenuUpload() {
   const user = useAuthStore((s) => s.user);
   const refreshUser = useAuthStore((s) => s.refreshUser);
 
   const [file, setFile] = useState(null);
-  const [localPreview, setLocalPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState(null);
   /** Bust browser cache after re-upload (same public URL). */
@@ -36,18 +17,7 @@ export default function MenuUpload() {
     refreshUser();
   }, [refreshUser]);
 
-  useEffect(() => {
-    return () => {
-      if (localPreview) URL.revokeObjectURL(localPreview);
-    };
-  }, [localPreview]);
-
   const savedPdfUrl = user?.pdf_url ?? null;
-
-  const livePreviewSrc = useMemo(
-    () => (savedPdfUrl ? pdfIframeSrc(savedPdfUrl, liveRev) : ""),
-    [savedPdfUrl, liveRev]
-  );
 
   const handleFile = (e) => {
     const selected = e.target.files[0];
@@ -58,33 +28,32 @@ export default function MenuUpload() {
     }
     setMsg(null);
     setFile(selected);
-    setLocalPreview((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return URL.createObjectURL(selected);
-    });
   };
 
   const handleDownloadMenu = async () => {
     if (!savedPdfUrl) return;
     const name = `${user?.shop_username || "menu"}.pdf`;
+    setMsg(null);
     try {
-      const res = await fetch(savedPdfUrl);
-      if (!res.ok) throw new Error("fetch failed");
+      const res = await fetch(savedPdfUrl, { mode: "cors" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
-      const objectUrl = URL.createObjectURL(blob);
+      const type = blob.type || "application/pdf";
+      const pdfBlob = type.includes("pdf") ? blob : new Blob([blob], { type: "application/pdf" });
+      const objectUrl = URL.createObjectURL(pdfBlob);
       const a = document.createElement("a");
       a.href = objectUrl;
       a.download = name;
       a.rel = "noopener";
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(objectUrl);
     } catch {
-      const a = document.createElement("a");
-      a.href = savedPdfUrl;
-      a.download = name;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      a.click();
+      setMsg({
+        type: "err",
+        text: "Could not download the PDF. Check your connection or try again on Wi‑Fi.",
+      });
     }
   };
 
@@ -102,10 +71,6 @@ export default function MenuUpload() {
       return;
     }
     setFile(null);
-    if (localPreview) {
-      URL.revokeObjectURL(localPreview);
-      setLocalPreview(null);
-    }
     setLiveRev(Date.now());
     await refreshUser();
     setMsg({
@@ -119,7 +84,8 @@ export default function MenuUpload() {
       <div>
         <h2 className="text-lg font-semibold text-[#262626]">Your menu</h2>
         <p className="mt-1 text-sm text-[#737373]">
-          Upload a PDF — guests open it from your public link (Profile). Only that link feeds Insights.
+          Upload a PDF — guests open it from your public link (Profile). Only that link feeds Insights. Preview is
+          drawn in the app (works on phones; Download saves the file only).
         </p>
       </div>
 
@@ -149,17 +115,7 @@ export default function MenuUpload() {
               Download PDF
             </button>
           </div>
-          {/* <p className="text-[11px] leading-snug text-[#8e8e8e]">
-            Shown only while you&apos;re signed in. This preview does not count as a menu open — analytics use your guest
-            link from Profile, not this screen.
-          </p> */}
-          <div className="overflow-hidden rounded-lg border border-[#dbdbdb] bg-[#1a1a1a] shadow-sm">
-            <iframe
-              title="Your menu PDF"
-              src={livePreviewSrc}
-              className="block h-[min(82vh,780px)] w-full border-0 bg-[#2d2d2d]"
-            />
-          </div>
+          <PdfCanvasPreview url={savedPdfUrl} version={liveRev} />
         </div>
       ) : (
         <div className="rounded-xl border border-[#dbdbdb] bg-white p-5 shadow-sm">
@@ -182,18 +138,10 @@ export default function MenuUpload() {
         </label>
       </div>
 
-      {localPreview && (
+      {file && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#8e8e8e]">
-            New file preview
-          </p>
-          <div className="overflow-hidden rounded-lg border border-[#dbdbdb] bg-[#1a1a1a] shadow-sm">
-            <iframe
-              title="New PDF preview"
-              src={pdfBlobPreviewSrc(localPreview)}
-              className="block h-[min(65vh,560px)] w-full border-0 bg-[#2d2d2d]"
-            />
-          </div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#8e8e8e]">New file preview</p>
+          <PdfCanvasPreview file={file} version={file.name + String(file.size)} />
         </div>
       )}
 
