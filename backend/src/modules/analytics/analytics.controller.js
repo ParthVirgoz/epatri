@@ -1,5 +1,21 @@
 import { AnalyticsService } from './analytics.service.js';
 import { trackAnalyticsSchema, analyticsQuerySchema } from './analytics.schema.js';
+import { parseUserAgent } from '../../utils/parseUserAgent.js';
+
+/** Only the profile owner for this `shop_username` may read analytics. */
+async function assertShopOwner(req, shopUsername) {
+  const { data: profile, error } = await req.server.supabaseAdmin
+    .from('profiles')
+    .select('shop_username')
+    .eq('id', req.user.id)
+    .single();
+
+  if (error || !profile || profile.shop_username !== shopUsername) {
+    const err = new Error('Forbidden');
+    err.statusCode = 403;
+    throw err;
+  }
+}
 
 export async function trackMenuViewController(req, reply) {
   try {
@@ -90,6 +106,8 @@ export async function getAnalyticsSummaryController(req, reply) {
       return reply.code(404).send({ message: 'Shop not found' });
     }
 
+    await assertShopOwner(req, shop_username);
+
     const analyticsService = new AnalyticsService(req.server.supabaseAdmin);
     const result = await analyticsService.getAnalyticsSummary(
       shopData.id,
@@ -100,7 +118,8 @@ export async function getAnalyticsSummaryController(req, reply) {
     return reply.send(result);
   } catch (err) {
     console.error('Fetch analytics summary error:', err);
-    return reply.code(500).send({ message: err.message });
+    const status = err.statusCode || 500;
+    return reply.code(status).send({ message: err.message || 'Server error' });
   }
 }
 
@@ -123,6 +142,8 @@ export async function getAnalyticsDetailController(req, reply) {
       return reply.code(404).send({ message: 'Shop not found' });
     }
 
+    await assertShopOwner(req, shop_username);
+
     const analyticsService = new AnalyticsService(req.server.supabaseAdmin);
     const result = await analyticsService.getAnalyticsDetail(
       shopData.id,
@@ -136,70 +157,7 @@ export async function getAnalyticsDetailController(req, reply) {
       return reply.code(400).send({ message: 'Validation error', errors: err.errors });
     }
     console.error('Fetch analytics detail error:', err);
-    return reply.code(500).send({ message: err.message });
+    const status = err.statusCode || 500;
+    return reply.code(status).send({ message: err.message || 'Server error' });
   }
-}
-
-// Helper function to parse user agent
-function parseUserAgent(userAgent) {
-  const result = {
-    device_type: 'desktop',
-    browser: 'unknown',
-    os: 'unknown',
-    os_version: 'unknown',
-    device_brand: 'unknown',
-  };
-
-  if (!userAgent) return result;
-
-  // Detect device type
-  if (/mobile|android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile/i.test(userAgent)) {
-    result.device_type = /iPad|Android.*?tablet/i.test(userAgent) ? 'tablet' : 'mobile';
-  }
-
-  // Detect OS
-  if (/Windows/i.test(userAgent)) {
-    result.os = 'Windows';
-    const match = userAgent.match(/Windows NT ([\d.]+)/);
-    if (match) result.os_version = match[1];
-  } else if (/Mac/i.test(userAgent)) {
-    result.os = 'macOS';
-    const match = userAgent.match(/Mac OS X ([\d_]+)/);
-    if (match) result.os_version = match[1].replace(/_/g, '.');
-  } else if (/Linux/i.test(userAgent)) {
-    result.os = 'Linux';
-  } else if (/Android/i.test(userAgent)) {
-    result.os = 'Android';
-    const match = userAgent.match(/Android ([\d.]+)/);
-    if (match) result.os_version = match[1];
-  } else if (/iPhone|iPad|iPod/i.test(userAgent)) {
-    result.os = 'iOS';
-    const match = userAgent.match(/OS ([\d_]+)/);
-    if (match) result.os_version = match[1].replace(/_/g, '.');
-  }
-
-  // Detect browser
-  if (/Edge/i.test(userAgent)) {
-    result.browser = 'Edge';
-  } else if (/Chrome/i.test(userAgent)) {
-    result.browser = 'Chrome';
-  } else if (/Safari/i.test(userAgent)) {
-    result.browser = 'Safari';
-  } else if (/Firefox/i.test(userAgent)) {
-    result.browser = 'Firefox';
-  }
-
-  // Detect device brand
-  if (/iPhone/i.test(userAgent)) {
-    result.device_brand = 'Apple';
-  } else if (/iPad/i.test(userAgent)) {
-    result.device_brand = 'Apple';
-  } else if (/Android/i.test(userAgent)) {
-    if (/Samsung/i.test(userAgent)) result.device_brand = 'Samsung';
-    else if (/Xiaomi/i.test(userAgent)) result.device_brand = 'Xiaomi';
-    else if (/Huawei/i.test(userAgent)) result.device_brand = 'Huawei';
-    else result.device_brand = 'Android';
-  }
-
-  return result;
 }

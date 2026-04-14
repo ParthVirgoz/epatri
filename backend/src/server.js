@@ -45,14 +45,8 @@ await app.register(multipart, {
 });
 await app.register(v1Routes, { prefix: '/api/v1' });
 
-// Add CORS headers to all responses (serverless fix)
-app.addHook('preHandler', (request, reply, done) => {
-  reply.header('Access-Control-Allow-Origin', '*');
-  reply.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
-  reply.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin');
-  reply.header('Access-Control-Allow-Credentials', 'true');
-  done();
-});
+// CORS is handled by @fastify/cors in securityPlugin (allowlist). Do not set
+// Access-Control-Allow-Origin: * together with credentials — browsers reject it.
 
 // prepare app (IMPORTANT)
 await app.ready();

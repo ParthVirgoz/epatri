@@ -39,6 +39,16 @@ export const useAuthStore = create((set) => ({
     });
   },
 
+  /** Load full profile (shop_username, etc.) after login — Supabase user alone may lack profile fields. */
+  refreshUser: async () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    const [data, error] = await getMeApi();
+    if (!error && data) {
+      set({ user: data });
+    }
+  },
+
   logout: () => {
     localStorage.removeItem("access_token");
 

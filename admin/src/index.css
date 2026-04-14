@@ -1,1 +1,61 @@
 @import "tailwindcss";
+
+/*
+  ePatri brand
+  — "e" green, "Patri" saffron/orange (logo)
+*/
+:root {
+  --brand-e: #1e9459;
+  --brand-e-dark: #167a4a;
+  --brand-e-muted: rgba(30, 148, 89, 0.12);
+  --brand-patri: #ff9423;
+  --brand-patri-dark: #e88718;
+  --brand-patri-muted: rgba(255, 148, 35, 0.15);
+
+  --app-bg: #f7faf8;
+  --app-surface: #ffffff;
+  --app-border: #dbdbdb;
+  --app-text: #262626;
+  --app-text-secondary: #737373;
+  --app-link: var(--brand-e);
+  --app-link-hover: var(--brand-e-dark);
+  --nav-h: 3.25rem;
+  --bottom-nav-h: 3.5rem;
+}
+
+@theme {
+  --color-brand-e: #1e9459;
+  --color-brand-e-dark: #167a4a;
+  --color-brand-patri: #ff9423;
+  --color-brand-patri-dark: #e88718;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand-e);
+  outline-offset: 2px;
+}

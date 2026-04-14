@@ -1,33 +1,110 @@
-import { Outlet, Link } from "react-router-dom";
-import { useAuthStore } from "../features/auth/auth.store";
+import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import BrandWordmark from "../components/BrandWordmark";
+import ShareMenuLinkButton from "../components/ShareMenuLinkButton";
+
+function NavIcon({ children, active }) {
+  return (
+    <span
+      className={`flex h-6 w-6 items-center justify-center transition-opacity ${
+        active ? "opacity-100" : "opacity-45"
+      }`}
+      aria-hidden
+    >
+      {children}
+    </span>
+  );
+}
 
 const AdminLayout = () => {
-  const { logout } = useAuthStore();
+  const navigate = useNavigate();
+
+  const tabClass = ({ isActive }) =>
+    `flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-semibold tracking-wide ${
+      isActive ? "text-[#262626]" : "text-[#737373]"
+    }`;
 
   return (
-    <div className="flex h-screen">
-      <aside className="w-64 bg-black text-white p-4">
-        <h2 className="text-lg font-bold mb-4">Admin</h2>
+    <div className="flex min-h-dvh flex-col bg-[#fafafa]">
+      <header
+        className="sticky top-0 z-20 grid h-[var(--nav-h)] shrink-0 grid-cols-[1fr_auto_1fr] items-center border-b border-[#dbdbdb] bg-white px-[max(12px,env(safe-area-inset-left))] pr-[max(12px,env(safe-area-inset-right))]"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
+        <span className="min-w-0" aria-hidden />
+        <button
+          type="button"
+          onClick={() => navigate("/menu")}
+          className="select-none justify-self-center text-lg"
+        >
+          <BrandWordmark />
+        </button>
+        <div className="flex min-w-0 justify-end">
+          <ShareMenuLinkButton />
+        </div>
+      </header>
 
-        <nav className="space-y-2">
-          <Link to="/dashboard" className="block hover:underline">
-            Dashboard
-          </Link>
-          <Link to="/menu" className="block hover:underline">
-            Menu
-          </Link>
-          <button
-            onClick={logout}
-            className="mt-4 text-red-400"
-          >
-            Logout
-          </button>
-        </nav>
-      </aside>
-
-      <main className="flex-1 p-6 bg-gray-50">
+      <main
+        className="flex-1 overflow-y-auto px-4 pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom)+12px)] pt-4"
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
         <Outlet />
       </main>
+
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-30 flex border-t border-[#dbdbdb] bg-white"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        aria-label="Main"
+      >
+        <NavLink to="/menu" end className={tabClass}>
+          {({ isActive }) => (
+            <>
+              <NavIcon active={isActive}>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="8" y1="13" x2="16" y2="13" />
+                  <line x1="8" y1="17" x2="14" y2="17" />
+                </svg>
+              </NavIcon>
+              Menu
+            </>
+          )}
+        </NavLink>
+        <NavLink to="/insights" className={tabClass}>
+          {({ isActive }) => (
+            <>
+              <NavIcon active={isActive}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                  <path d="M4 19V5M9 19V9M14 19v-6M19 19V12" strokeLinecap="round" />
+                </svg>
+              </NavIcon>
+              Insights
+            </>
+          )}
+        </NavLink>
+        <NavLink to="/profile" className={tabClass}>
+          {({ isActive }) => (
+            <>
+              <NavIcon active={isActive}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                  <circle cx="12" cy="8" r="3.5" />
+                  <path d="M5 20v-1c0-2.5 2-4.5 7-4.5s7 2 7 4.5v1" strokeLinecap="round" />
+                </svg>
+              </NavIcon>
+              Profile
+            </>
+          )}
+        </NavLink>
+      </nav>
     </div>
   );
 };

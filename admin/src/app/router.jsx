@@ -1,54 +1,50 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 
 import ProtectedRoute from "../shared/components/ProtectedRoute";
 import AdminLayout from "../layouts/AdminLayout";
+import HomeRedirect from "./HomeRedirect";
 
 import Login from "../features/auth/pages/Login";
 import Register from "../features/auth/pages/Register";
+import AdminLanding from "../features/marketing/pages/AdminLanding";
 
-import Dashboard from "../features/dashboard/pages/Dashboard";
 import MenuUpload from "../features/menu/pages/MenuUpload";
-// import MenuBuilder from "../features/pdf/pages/MenuBuilder";
-// import MenuBuilder2 from "../features/pdf/2/MenuBuilderTemplate2";
-import AnalyticsDashboard from '../features/analytics/AnalyticsDashboard';
+import AnalyticsDashboard from "../features/analytics/AnalyticsDashboard";
+import Profile from "../features/profile/pages/Profile";
+
+function AppRoot() {
+  return <Outlet />;
+}
 
 export const router = createBrowserRouter([
-    {
-        path: "/login",
-        element: <Login />,
-    },
-    {
-        path: "/register",
-        element: <Register />,
-    },
-    {
-        path: "/analytics",
-        element: <AnalyticsDashboard />,
-    },
-    // {
-    //     path: "/pdf",
-    //     element: <MenuBuilder />,
-    // },
-    // {
-    //     path: "/pdf2",
-    //     element: <MenuBuilder2 />,
-    // },
-    {
-        path: "/",
+  {
+    path: "/",
+    element: <AppRoot />,
+    children: [
+      { index: true, element: <HomeRedirect /> },
+      { path: "welcome", element: <AdminLanding /> },
+      { path: "login", element: <Login /> },
+      { path: "register", element: <Register /> },
+      {
         element: (
-            <ProtectedRoute>
-                <AdminLayout />
-            </ProtectedRoute>
+          <ProtectedRoute>
+            <AdminLayout />
+          </ProtectedRoute>
         ),
         children: [
-            {
-                path: "dashboard",
-                element: <Dashboard />,
-            },
-            {
-                path: "menu",
-                element: <MenuUpload />,
-            },
+          { path: "menu", element: <MenuUpload /> },
+          { path: "insights", element: <AnalyticsDashboard /> },
+          { path: "profile", element: <Profile /> },
         ],
-    },
+      },
+      {
+        path: "analytics",
+        element: (
+          <ProtectedRoute>
+            <Navigate to="/insights" replace />
+          </ProtectedRoute>
+        ),
+      },
+    ],
+  },
 ]);

@@ -1,1 +1,7 @@
 @import "tailwindcss";
+
+/* Guest menu / shared public surfaces — matches admin brand tokens */
+:root {
+  --brand-e: #1e9459;
+  --brand-patri: #ff9423;
+}

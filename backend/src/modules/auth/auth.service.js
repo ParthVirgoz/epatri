@@ -1,3 +1,5 @@
+import { env } from '../../config/env.js';
+
 export async function registerUser(fastify, data) {
   const { email, password, shop_username, shop_name } = data;
 
@@ -73,18 +75,32 @@ export async function loginUser(fastify, data) {
 }
 
 export async function getCurrentUser(fastify, user) {
-  const { data } = await fastify.supabaseAdmin
+  const { data: profile, error } = await fastify.supabaseAdmin
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .single();
 
-  return data;
+  if (error || !profile) {
+    return null;
+  }
+
+  const { data: menu } = await fastify.supabaseAdmin
+    .from("menus")
+    .select("pdf_url")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  return {
+    ...profile,
+    pdf_url: menu?.pdf_url ?? null,
+  };
 }
 
 export async function forgotPassword(fastify, email) {
+  const redirectTo = `${env.ADMIN_FRONTEND_URL.replace(/\/$/, '')}/reset-password`;
   const { error } = await fastify.supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: "http://localhost:5173/reset-password",
+    redirectTo,
   });
 
   if (error) throw new Error(error.message);
@@ -92,8 +108,20 @@ export async function forgotPassword(fastify, email) {
   return { message: "Reset email sent" };
 }
 
-export async function resetPassword(fastify, password, access_token) {
-  const { error } = await fastify.supabase.auth.updateUser({
+/** Body must include `password` and `access_token` from the Supabase recovery link (hash → SPA). */
+export async function resetPassword(fastify, { password, access_token: accessToken }) {
+  if (!password || !accessToken) {
+    throw new Error('Password and access_token are required');
+  }
+
+  const { data: userData, error: userErr } = await fastify.supabase.auth.getUser(accessToken);
+  if (userErr || !userData?.user) {
+    const err = new Error('Invalid or expired recovery token');
+    err.status = 401;
+    throw err;
+  }
+
+  const { error } = await fastify.supabaseAdmin.auth.admin.updateUserById(userData.user.id, {
     password,
   });
 

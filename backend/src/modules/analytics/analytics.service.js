@@ -1,3 +1,5 @@
+import { parseDateRangeToUtcBounds } from '../../utils/dateRange.js';
+
 export class AnalyticsService {
   constructor(supabaseAdmin) {
     this.supabaseAdmin = supabaseAdmin;
@@ -48,12 +50,12 @@ export class AnalyticsService {
         query = query.eq('shop_id', shopId);
       }
 
-      if (startDate) {
-        query = query.gte('tracked_at', startDate);
+      const { startIso, endExclusiveIso } = parseDateRangeToUtcBounds(startDate, endDate);
+      if (startIso) {
+        query = query.gte('tracked_at', startIso);
       }
-
-      if (endDate) {
-        query = query.lte('tracked_at', endDate);
+      if (endExclusiveIso) {
+        query = query.lt('tracked_at', endExclusiveIso);
       }
 
       const { data, error } = await query.order('tracked_at', { ascending: false });
@@ -65,6 +67,10 @@ export class AnalyticsService {
       const summary = {
         total_views: data.length,
         device_breakdown: this._getDeviceBreakdown(data),
+        /** Phones & tablets only — use for “which brands” (Link-in-bio traffic is mostly here). */
+        mobile_brand_breakdown: this._getMobileBrandBreakdown(data),
+        /** Desktop / laptop only — meaningful OS split (Windows vs macOS vs Linux). */
+        desktop_os_breakdown: this._getDesktopOsBreakdown(data),
         browser_breakdown: this._getBrowserBreakdown(data),
         os_breakdown: this._getOSBreakdown(data),
         country_breakdown: this._getCountryBreakdown(data),
@@ -119,6 +125,32 @@ export class AnalyticsService {
       breakdown[device] = (breakdown[device] || 0) + 1;
     });
     return breakdown;
+  }
+
+  _getMobileBrandBreakdown(data) {
+    const breakdown = {};
+    data.forEach((item) => {
+      const dt = item.device_type || '';
+      if (dt !== 'mobile' && dt !== 'tablet') return;
+      const brand = item.device_brand || 'unknown';
+      breakdown[brand] = (breakdown[brand] || 0) + 1;
+    });
+    return Object.entries(breakdown)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .reduce((acc, [key, val]) => ({ ...acc, [key]: val }), {});
+  }
+
+  _getDesktopOsBreakdown(data) {
+    const breakdown = {};
+    data.forEach((item) => {
+      if ((item.device_type || '') !== 'desktop') return;
+      const os = item.os || 'unknown';
+      breakdown[os] = (breakdown[os] || 0) + 1;
+    });
+    return Object.entries(breakdown)
+      .sort((a, b) => b[1] - a[1])
+      .reduce((acc, [key, val]) => ({ ...acc, [key]: val }), {});
   }
 
   _getBrowserBreakdown(data) {
