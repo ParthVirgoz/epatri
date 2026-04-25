@@ -59,3 +59,14 @@ body {
   outline: 2px solid var(--brand-e);
   outline-offset: 2px;
 }
+
+/* Keep scroll behavior but hide visible scrollbar chrome. */
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE/Edge legacy */
+  scrollbar-width: none; /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}

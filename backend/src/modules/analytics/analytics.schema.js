@@ -16,6 +16,10 @@ export const trackAnalyticsSchema = z.object({
   longitude: z.number().optional().nullable(),
   referrer: z.string().optional().nullable(),
   session_id: z.string().optional().nullable(),
+  business_id: z.string().uuid().optional().nullable(),
+  location_id: z.string().uuid().optional().nullable(),
+  menu_id: z.string().uuid().optional().nullable(),
+  event_type: z.string().optional().default('view'),
 }).strict(false);  // Allow extra fields
 
 export const analyticsQuerySchema = z.object({
@@ -23,6 +27,7 @@ export const analyticsQuerySchema = z.object({
   start_date: z.string().datetime().optional(),
   end_date: z.string().datetime().optional(),
   device_type: z.string().optional(),
+  location_id: z.string().uuid().optional(),
   limit: z.coerce.number().min(1).max(1000).default(100),
   offset: z.coerce.number().min(0).default(0),
 });

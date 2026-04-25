@@ -24,37 +24,38 @@ const AdminLayout = () => {
     }`;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#fafafa]">
+    <div className="flex min-h-dvh max-h-dvh flex-col bg-[#f6f6f4]">
       <header
-        className="sticky top-0 z-20 grid h-[var(--nav-h)] shrink-0 grid-cols-[1fr_auto_1fr] items-center border-b border-[#dbdbdb] bg-white px-[max(12px,env(safe-area-inset-left))] pr-[max(12px,env(safe-area-inset-right))]"
+        className="sticky top-0 z-20 grid h-[var(--nav-h)] shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-neutral-200/90 bg-white/85 px-[max(8px,env(safe-area-inset-left))] pr-[max(8px,env(safe-area-inset-right))] shadow-[0_1px_0_rgba(0,0,0,0.03)] backdrop-blur-xl backdrop-saturate-150"
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
-        <span className="min-w-0" aria-hidden />
+        <div className="min-w-0 justify-self-start">
+        </div>
         <button
           type="button"
-          onClick={() => navigate("/menu")}
+          onClick={() => navigate("/app/menu")}
           className="select-none justify-self-center text-lg"
         >
           <BrandWordmark />
         </button>
-        <div className="flex min-w-0 justify-end">
+        <div className="flex min-w-0 items-center justify-end gap-2">
           <ShareMenuLinkButton />
         </div>
       </header>
 
       <main
-        className="flex-1 overflow-y-auto px-4 pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom)+12px)] pt-4"
+        className="flex-1 overflow-y-auto h-[calc(100dvh-var(--nav-h)-var(--bottom-nav-h))] max-h-[calc(100dvh-var(--nav-h)-var(--bottom-nav-h))] lg:h-[calc(100dvh-var(--nav-h)-var(--bottom-nav-h))] lg:max-h-[calc(100dvh-var(--nav-h)-var(--bottom-nav-h))]"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
         <Outlet />
       </main>
 
       <nav
-        className="fixed bottom-0 left-0 right-0 z-30 flex border-t border-[#dbdbdb] bg-white"
+        className="fixed bottom-0 left-0 right-0 z-30 flex border-t border-neutral-200/90 bg-white/92 backdrop-blur-xl backdrop-saturate-150"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         aria-label="Main"
       >
-        <NavLink to="/menu" end className={tabClass}>
+        <NavLink to="/app/menu" end className={tabClass}>
           {({ isActive }) => (
             <>
               <NavIcon active={isActive}>
@@ -79,7 +80,7 @@ const AdminLayout = () => {
             </>
           )}
         </NavLink>
-        <NavLink to="/insights" className={tabClass}>
+        <NavLink to="/app/insights" className={tabClass}>
           {({ isActive }) => (
             <>
               <NavIcon active={isActive}>
@@ -91,7 +92,7 @@ const AdminLayout = () => {
             </>
           )}
         </NavLink>
-        <NavLink to="/profile" className={tabClass}>
+        <NavLink to="/app/profile" className={tabClass}>
           {({ isActive }) => (
             <>
               <NavIcon active={isActive}>

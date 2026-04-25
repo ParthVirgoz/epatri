@@ -1,4 +1,9 @@
-import { parseDateRangeToUtcBounds } from '../../utils/dateRange.js';
+import {
+  isYmd,
+  listYmdInclusive,
+  parseDateRangeToUtcBounds,
+  ymdAddDays,
+} from '../../utils/dateRange.js';
 
 export class AnalyticsService {
   constructor(supabaseAdmin) {
@@ -25,6 +30,10 @@ export class AnalyticsService {
           longitude: analyticsData.longitude || null,
           referrer: analyticsData.referrer || null,
           session_id: analyticsData.session_id || null,
+          business_id: analyticsData.business_id ?? null,
+          location_id: analyticsData.location_id ?? null,
+          menu_id: analyticsData.menu_id ?? null,
+          event_type: analyticsData.event_type || 'view',
           tracked_at: new Date().toISOString(),
         }]);
 
@@ -40,32 +49,69 @@ export class AnalyticsService {
     }
   }
 
-  async getAnalyticsSummary(shopId, startDate, endDate) {
+  async _fetchMenuAnalyticsRows(shopId, locationId, startIso, endExclusiveIso) {
+    let query = this.supabaseAdmin.from('menu_analytics').select('*');
+
+    if (locationId) {
+      query = query.eq('location_id', locationId);
+    } else if (shopId) {
+      query = query.eq('shop_id', shopId);
+    }
+
+    if (startIso) {
+      query = query.gte('tracked_at', startIso);
+    }
+    if (endExclusiveIso) {
+      query = query.lt('tracked_at', endExclusiveIso);
+    }
+
+    const { data, error } = await query.order('tracked_at', { ascending: false });
+    if (error) {
+      throw error;
+    }
+    return data || [];
+  }
+
+  async getAnalyticsSummary(shopId, startDate, endDate, locationId, tzOffsetMin = 0) {
     try {
-      let query = this.supabaseAdmin
-        .from('menu_analytics')
-        .select('*');
+      const { startIso, endExclusiveIso } = parseDateRangeToUtcBounds(startDate, endDate, tzOffsetMin);
+      const data = await this._fetchMenuAnalyticsRows(shopId, locationId, startIso, endExclusiveIso);
 
-      if (shopId) {
-        query = query.eq('shop_id', shopId);
-      }
-
-      const { startIso, endExclusiveIso } = parseDateRangeToUtcBounds(startDate, endDate);
-      if (startIso) {
-        query = query.gte('tracked_at', startIso);
-      }
-      if (endExclusiveIso) {
-        query = query.lt('tracked_at', endExclusiveIso);
-      }
-
-      const { data, error } = await query.order('tracked_at', { ascending: false });
-
-      if (error) {
-        throw error;
+      /** Same calendar span immediately before `startDate`, for menu-open growth % */
+      let growth = null;
+      if (isYmd(startDate) && isYmd(endDate)) {
+        const spanDays = listYmdInclusive(String(startDate).trim(), String(endDate).trim());
+        const n = spanDays.length;
+        if (n > 0) {
+          const prevEnd = ymdAddDays(String(startDate).trim(), -1);
+          const prevStart = ymdAddDays(prevEnd, -(n - 1));
+          const prevBounds = parseDateRangeToUtcBounds(prevStart, prevEnd, tzOffsetMin);
+          const prevRows = await this._fetchMenuAnalyticsRows(
+            shopId,
+            locationId,
+            prevBounds.startIso,
+            prevBounds.endExclusiveIso,
+          );
+          const current_total = data.length;
+          const previous_total = prevRows.length;
+          let percent_change = null;
+          if (previous_total > 0) {
+            percent_change = ((current_total - previous_total) / previous_total) * 100;
+          }
+          growth = {
+            current_total,
+            previous_total,
+            percent_change,
+            period_days: n,
+            previous_period_start: prevStart,
+            previous_period_end: prevEnd,
+          };
+        }
       }
 
       const summary = {
         total_views: data.length,
+        growth,
         device_breakdown: this._getDeviceBreakdown(data),
         /** Phones & tablets only — use for “which brands” (Link-in-bio traffic is mostly here). */
         mobile_brand_breakdown: this._getMobileBrandBreakdown(data),
@@ -85,13 +131,15 @@ export class AnalyticsService {
     }
   }
 
-  async getAnalyticsDetail(shopId, limit = 100, offset = 0) {
+  async getAnalyticsDetail(shopId, limit = 100, offset = 0, locationId) {
     try {
       let query = this.supabaseAdmin
         .from('menu_analytics')
         .select('*');
 
-      if (shopId) {
+      if (locationId) {
+        query = query.eq('location_id', locationId);
+      } else if (shopId) {
         query = query.eq('shop_id', shopId);
       }
 

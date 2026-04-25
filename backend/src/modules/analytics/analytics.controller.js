@@ -1,6 +1,9 @@
 import { AnalyticsService } from './analytics.service.js';
 import { trackAnalyticsSchema, analyticsQuerySchema } from './analytics.schema.js';
 import { parseUserAgent } from '../../utils/parseUserAgent.js';
+import { publishAnalyticsEvent, subscribeAnalyticsShop } from './analytics.realtime.js';
+import { isOriginAllowed } from '../../config/corsAllowlist.js';
+import { bumpTreeImpactCounters } from '../public/public.service.js';
 
 /** Only the profile owner for this `shop_username` may read analytics. */
 async function assertShopOwner(req, shopUsername) {
@@ -11,6 +14,35 @@ async function assertShopOwner(req, shopUsername) {
     .single();
 
   if (error || !profile || profile.shop_username !== shopUsername) {
+    const err = new Error('Forbidden');
+    err.statusCode = 403;
+    throw err;
+  }
+}
+
+/** When filtering by `location_id`, ensure it belongs to the user's business (post–V2 migration). */
+async function assertCanReadAnalyticsForLocation(req, shopUsername, locationId) {
+  await assertShopOwner(req, shopUsername);
+  if (!locationId) return;
+  const { data: prof } = await req.server.supabaseAdmin
+    .from('profiles')
+    .select('business_id')
+    .eq('id', req.user.id)
+    .maybeSingle();
+  if (!prof?.business_id) return;
+
+  const { data: loc } = await req.server.supabaseAdmin
+    .from('locations')
+    .select('business_id')
+    .eq('id', locationId)
+    .maybeSingle();
+
+  if (!loc) {
+    const err = new Error('Location not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  if (loc.business_id !== prof.business_id) {
     const err = new Error('Forbidden');
     err.statusCode = 403;
     throw err;
@@ -63,6 +95,10 @@ export async function trackMenuViewController(req, reply) {
       region: req.body?.region || null,
       latitude: req.body?.latitude || null,
       longitude: req.body?.longitude || null,
+      business_id: req.body?.business_id || null,
+      location_id: req.body?.location_id || null,
+      menu_id: req.body?.menu_id || null,
+      event_type: req.body?.event_type || 'view',
     };
 
     console.log('📊 [Analytics] Data to validate:', analyticsData);
@@ -74,6 +110,15 @@ export async function trackMenuViewController(req, reply) {
     // Create analytics service and track
     const analyticsService = new AnalyticsService(req.server.supabaseAdmin);
     const result = await analyticsService.trackMenuView(validatedData);
+    // Keep impact increments inside the existing menu tracking API flow.
+    await bumpTreeImpactCounters(req.server, { source: 'menu' }).catch(() => null);
+    publishAnalyticsEvent(shop_username, {
+      type: 'menu_open',
+      tracked_at: new Date().toISOString(),
+      event_type: validatedData.event_type || 'view',
+      location_id: validatedData.location_id || null,
+      device_type: validatedData.device_type || 'unknown',
+    });
 
     console.log('✅ [Analytics] Tracked successfully');
     return reply.code(201).send({
@@ -90,10 +135,54 @@ export async function trackMenuViewController(req, reply) {
   }
 }
 
+export async function streamAnalyticsEventsController(req, reply) {
+  const { shop_username } = req.params;
+  try {
+    await assertShopOwner(req, shop_username);
+  } catch (err) {
+    const status = err.statusCode || 500;
+    return reply.code(status).send({ message: err.message || 'Server error' });
+  }
+
+  const allowedOrigin = isOriginAllowed(req.headers.origin);
+  const headers = {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+    Vary: 'Origin',
+  };
+  if (allowedOrigin) {
+    headers['Access-Control-Allow-Origin'] = allowedOrigin;
+  }
+  reply.raw.writeHead(200, headers);
+  reply.raw.write(`event: connected\ndata: {"ok":true}\n\n`);
+
+  const send = (payload) => {
+    reply.raw.write(`event: analytics\ndata: ${JSON.stringify(payload)}\n\n`);
+  };
+  const unsubscribe = subscribeAnalyticsShop(shop_username, send);
+
+  const keepAlive = setInterval(() => {
+    reply.raw.write(`: ping ${Date.now()}\n\n`);
+  }, 25000);
+
+  req.raw.on('close', () => {
+    clearInterval(keepAlive);
+    unsubscribe();
+    try {
+      reply.raw.end();
+    } catch {
+      // noop
+    }
+  });
+}
+
 export async function getAnalyticsSummaryController(req, reply) {
   try {
     const { shop_username } = req.params;
-    const { start_date, end_date } = req.query;
+    const { start_date, end_date, location_id, tz_offset_min } = req.query;
+    const tzOffsetMin = Number.isFinite(Number(tz_offset_min)) ? Number(tz_offset_min) : 0;
 
     // Get shop info
     const { data: shopData, error: shopError } = await req.server.supabaseAdmin
@@ -106,13 +195,15 @@ export async function getAnalyticsSummaryController(req, reply) {
       return reply.code(404).send({ message: 'Shop not found' });
     }
 
-    await assertShopOwner(req, shop_username);
+    await assertCanReadAnalyticsForLocation(req, shop_username, location_id);
 
     const analyticsService = new AnalyticsService(req.server.supabaseAdmin);
     const result = await analyticsService.getAnalyticsSummary(
       shopData.id,
       start_date,
-      end_date
+      end_date,
+      location_id,
+      tzOffsetMin
     );
 
     return reply.send(result);
@@ -126,10 +217,10 @@ export async function getAnalyticsSummaryController(req, reply) {
 export async function getAnalyticsDetailController(req, reply) {
   try {
     const { shop_username } = req.params;
-    const { limit = 100, offset = 0 } = req.query;
+    const { limit = 100, offset = 0, location_id } = req.query;
 
     // Validate query
-    const validatedQuery = analyticsQuerySchema.parse({ limit, offset });
+    const validatedQuery = analyticsQuerySchema.parse({ limit, offset, location_id });
 
     // Get shop info
     const { data: shopData, error: shopError } = await req.server.supabaseAdmin
@@ -142,13 +233,14 @@ export async function getAnalyticsDetailController(req, reply) {
       return reply.code(404).send({ message: 'Shop not found' });
     }
 
-    await assertShopOwner(req, shop_username);
+    await assertCanReadAnalyticsForLocation(req, shop_username, validatedQuery.location_id);
 
     const analyticsService = new AnalyticsService(req.server.supabaseAdmin);
     const result = await analyticsService.getAnalyticsDetail(
       shopData.id,
       validatedQuery.limit,
-      validatedQuery.offset
+      validatedQuery.offset,
+      validatedQuery.location_id
     );
 
     return reply.send(result);

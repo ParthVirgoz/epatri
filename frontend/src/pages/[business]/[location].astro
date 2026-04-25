@@ -1,0 +1,225 @@
+---
+import MenuGuestLayout from "../../components/MenuGuestLayout.astro";
+
+export const prerender = false;
+
+const { business, location } = Astro.params;
+
+const apiBaseUrl =
+  import.meta.env.PUBLIC_API_URL ||
+  (import.meta.env.MODE === "production" ? "https://epatri-be.vercel.app/api/v1" : "http://localhost:5000/api/v1");
+
+const partnerAdminBase = import.meta.env.PUBLIC_PARTNER_SIGNUP_URL?.replace(/\/$/, "") || "";
+
+const pageUrl = Astro.url.href;
+
+type CurrentLoc = {
+  name: string;
+  slug?: string;
+  has_menu?: boolean;
+  area_label?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  address_text?: string | null;
+  pdf_url?: string | null;
+  digital_menu?: Record<string, unknown>;
+  business_id?: string | null;
+  location_id?: string | null;
+  id?: string | null;
+  menu_id?: string | null;
+  guest_menu_format?: "auto" | "pdf" | "interactive";
+};
+
+type PublicMenuPayload = {
+  business_name: string;
+  business_id?: string | null;
+  analytics_track_username: string;
+  current_location?: CurrentLoc;
+  interactive_theme?: Record<string, unknown> | null;
+};
+
+let payload: PublicMenuPayload | null = null;
+let fetchError: string | null = null;
+
+try {
+  const res = await fetch(
+    `${apiBaseUrl}/public/${encodeURIComponent(business || "")}/${encodeURIComponent(location || "")}`
+  );
+  if (!res.ok) {
+    fetchError = res.status === 404 ? "This outlet was not found." : "Could not load this page.";
+  } else {
+    payload = await res.json();
+  }
+} catch {
+  fetchError = "Could not load this page.";
+}
+
+const loc = payload?.current_location;
+const hasMenu = Boolean(loc?.has_menu);
+
+const directionsUrl = (() => {
+  const la = loc?.latitude;
+  const ln = loc?.longitude;
+  if (la == null || ln == null) return null;
+  const a = Number(la);
+  const b = Number(ln);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${a},${b}`)}`;
+})();
+---
+
+{
+  fetchError || !loc ? (
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Menu | ePatri</title>
+      </head>
+      <body style="margin:0;font-family:system-ui;background:#f7faf8;color:#262626">
+        <main style="max-width:480px;margin:48px auto;padding:24px;text-align:center">
+          <h1 style="font-size:20px">Outlet not found</h1>
+          <p style="color:#737373">{fetchError || "Unknown error."}</p>
+          {business ? (
+            <p style="margin-top:16px">
+            <a href={`/${encodeURIComponent(business)}`} style="color:#1e9459;font-weight:600">
+                Back to outlets
+              </a>
+            </p>
+          ) : null}
+        </main>
+      </body>
+    </html>
+  ) : !hasMenu && payload && loc ? (
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{payload.business_name} — {loc.name} | ePatri</title>
+      </head>
+      <body style="margin:0;font-family:system-ui;background:#f7faf8;color:#262626">
+        <main style="max-width:520px;margin:40px auto;padding:24px 20px 48px">
+          <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#1e9459;letter-spacing:0.02em">ePatri</p>
+          <h1 style="font-size:22px;margin:0 0 12px;line-height:1.25">{loc.name}</h1>
+          <p style="margin:0 0 8px;color:#525252;font-size:15px;line-height:1.5">
+            This outlet does not have a live menu yet. Ask the owner to publish one, or share this page so they know
+            guests are waiting.
+          </p>
+          {loc.area_label ? <p style="margin:0 0 20px;color:#737373;font-size:14px">{loc.area_label}</p> : <p style="margin:0 0 20px" />}
+          {directionsUrl ? (
+            <p style="margin:0 0 20px">
+              <a href={directionsUrl} target="_blank" rel="noopener noreferrer" style="color:#1e9459;font-weight:600;text-decoration:none">
+                Directions
+              </a>
+            </p>
+          ) : null}
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <button
+              type="button"
+              id="ep-copy-share"
+              data-url={pageUrl}
+              style="cursor:pointer;border:none;border-radius:12px;background:#1e9459;color:#fff;font-weight:600;font-size:15px;padding:14px 16px"
+            >
+              Copy page link
+            </button>
+            <button
+              type="button"
+              id="ep-native-share"
+              data-url={pageUrl}
+              style="cursor:pointer;border:1px solid #dbdbdb;border-radius:12px;background:#fff;color:#262626;font-weight:600;font-size:15px;padding:14px 16px"
+            >
+              Share…
+            </button>
+          </div>
+          <p style="margin-top:28px;font-size:14px">
+            <a href={`/${encodeURIComponent(business || "")}`} style="color:#1e9459;font-weight:600;text-decoration:none">
+              ← All outlets for {payload.business_name}
+            </a>
+          </p>
+        </main>
+        <script is:inline>
+          (function () {
+            var copyBtn = document.getElementById("ep-copy-share");
+            var shareBtn = document.getElementById("ep-native-share");
+            var u = (copyBtn && copyBtn.getAttribute("data-url")) || "";
+            if (copyBtn) {
+              copyBtn.addEventListener("click", function () {
+                if (navigator.clipboard && u) {
+                  navigator.clipboard.writeText(u).then(
+                    function () {
+                      copyBtn.textContent = "Link copied";
+                      setTimeout(function () {
+                        copyBtn.textContent = "Copy page link";
+                      }, 2000);
+                    },
+                    function () {}
+                  );
+                }
+              });
+            }
+            if (shareBtn) {
+              if (!navigator.share) {
+                shareBtn.style.display = "none";
+              } else {
+                shareBtn.addEventListener("click", function () {
+                  navigator
+                    .share({
+                      title: "Menu not live yet",
+                      text: "This outlet is on ePatri but the menu is not published yet.",
+                      url: u,
+                    })
+                    .catch(function () {});
+                });
+              }
+            }
+          })();
+        </script>
+      </body>
+    </html>
+  ) : payload && loc && hasMenu ? (
+    <div>
+      {directionsUrl ? (
+        <div
+          style="margin:0;padding:12px 16px;border-bottom:1px solid #dbdbdb;background:#fff;font-family:system-ui,sans-serif;text-align:center"
+        >
+          <a
+            href={directionsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style="color:#1e9459;font-weight:600;font-size:14px;text-decoration:none"
+          >
+            Directions
+          </a>
+        </div>
+      ) : null}
+      <MenuGuestLayout
+        title={`${payload.business_name} — ${loc.name} | ePatri`}
+        shopDisplayName={`${payload.business_name} — ${loc.name}`}
+        analyticsTrackUsername={payload.analytics_track_username}
+        pdfUrl={loc.pdf_url ?? null}
+        digitalMenu={loc.digital_menu || {}}
+        apiBaseUrl={apiBaseUrl}
+        partnerAdminBase={partnerAdminBase}
+        analyticsBusinessId={payload.business_id ?? loc.business_id ?? null}
+        analyticsLocationId={loc.location_id ?? loc.id ?? null}
+        analyticsMenuId={loc.menu_id ?? null}
+        guestMenuFormat={loc.guest_menu_format ?? "auto"}
+        interactiveTheme={payload?.interactive_theme ?? null}
+      />
+    </div>
+  ) : (
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Menu | ePatri</title>
+      </head>
+      <body style="margin:0;font-family:system-ui;background:#f7faf8;color:#262626">
+        <main style="max-width:480px;margin:48px auto;padding:24px;text-align:center">
+          <h1 style="font-size:20px">Could not load menu</h1>
+          <p style="color:#737373">Something went wrong. Try again in a moment.</p>
+        </main>
+      </body>
+    </html>
+  )
+}

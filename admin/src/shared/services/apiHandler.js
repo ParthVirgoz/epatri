@@ -1,27 +1,22 @@
+import { toFriendlyApiError } from "../../messages/userFacing.js";
+
 export const handleApi = async (apiCall) => {
   try {
     const { data } = await apiCall;
     return [data, null];
   } catch (error) {
-    const status = error.response?.status;
+    const status = error.response?.status ?? 0;
     const serverMessage =
-      error.response?.data?.message ||
-      error.response?.data?.error ||
-      error.response?.data ||
-      null;
+      error.response?.data?.message ??
+      error.response?.data?.error ??
+      (typeof error.response?.data === "string" ? error.response.data : null);
 
-    const message =
+    const raw =
       serverMessage ||
       (error.message ? `${error.message}` : null) ||
-      "Something went wrong";
+      "";
 
-    const humanMessage =
-      status && serverMessage
-        ? `Error ${status}: ${message}`
-        : status
-        ? `Error ${status}: ${message}`
-        : message;
-
-    return [null, humanMessage];
+    const friendly = toFriendlyApiError(raw, status);
+    return [null, friendly];
   }
 };

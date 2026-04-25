@@ -10,4 +10,6 @@ export const env = {
     JWT_SECRET: process.env.JWT_SECRET,
     /** Password reset email redirect (admin app URL) */
     ADMIN_FRONTEND_URL: process.env.ADMIN_FRONTEND_URL || 'http://localhost:5173',
+    /** Optional full password reset redirect URL override. Example: https://admin.example.com/reset-password */
+    PASSWORD_RESET_REDIRECT_URL: process.env.PASSWORD_RESET_REDIRECT_URL || '',
 };

@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
 import { useAuthStore } from "../features/auth/auth.store";
 import { getPublicMenuUrl } from "../utils/menuPublicUrl";
+import ShareMenuModal from "../features/menu/components/ShareMenuModal";
 
 function ShareIcon() {
   return (
@@ -22,65 +22,30 @@ function ShareIcon() {
  */
 export default function ShareMenuLinkButton() {
   const user = useAuthStore((s) => s.user);
-  const navigate = useNavigate();
-  const [feedback, setFeedback] = useState(null);
+  const [open, setOpen] = useState(false);
 
-  const { url, ok } = getPublicMenuUrl(user);
-
-  const handleClick = async () => {
-    setFeedback(null);
-    if (!ok || !url) {
-      navigate("/profile");
-      return;
-    }
-
-    const title = user?.shop_name ? `${user.shop_name} — menu` : "Our menu";
-    const text = "Check out our menu";
-
-    if (typeof navigator !== "undefined" && navigator.share) {
-      try {
-        await navigator.share({ title, text, url });
-        return;
-      } catch (err) {
-        if (err?.name === "AbortError") return;
-      }
-    }
-
-    try {
-      await navigator.clipboard.writeText(url);
-      setFeedback("copy");
-      window.setTimeout(() => setFeedback(null), 2000);
-    } catch {
-      void 0;
-    }
-  };
-
-  const label =
-    feedback === "copy"
-      ? "Link copied"
-      : ok
-        ? "Share menu link"
-        : "Set up menu link";
+  const { url, ok } = useMemo(() => getPublicMenuUrl(user), [user]);
+  const label = ok ? "Share menu link" : "Set up menu link";
 
   return (
-    <div className="relative flex flex-col items-end">
+    <>
+      <ShareMenuModal
+        open={open}
+        onClose={() => setOpen(false)}
+        url={url}
+        ready={ok}
+        businessName={user?.shop_name || user?.shop_username}
+      />
       <button
         type="button"
-        onClick={handleClick}
-        className="flex h-10 w-10 items-center justify-center rounded-full text-[#262626] transition-colors hover:bg-[#f2f2f2] active:bg-[#ebebeb]"
+        onClick={() => setOpen(true)}
+        className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-neutral-900 px-3 text-xs font-bold text-white shadow-md shadow-neutral-900/15 transition hover:bg-black hover:shadow-lg sm:px-4 sm:text-sm"
         aria-label={label}
         title={label}
       >
         <ShareIcon />
+        <span className="hidden sm:inline">Share</span>
       </button>
-      {feedback === "copy" && (
-        <span
-          className="absolute right-0 top-full z-30 mt-1 whitespace-nowrap rounded-md bg-[#262626] px-2 py-1 text-[10px] font-semibold text-white shadow-md"
-          role="status"
-        >
-          Copied
-        </span>
-      )}
-    </div>
+    </>
   );
 }

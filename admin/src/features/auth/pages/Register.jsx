@@ -1,107 +1,247 @@
-import { useState } from "react";
-import { registerApi } from "../auth.api";
+import { useEffect, useRef, useState } from "react";
+import { getTreeImpactApi, registerApi } from "../auth.api";
 import { useNavigate, Link } from "react-router-dom";
 import BrandWordmark from "../../../components/BrandWordmark";
+import { toast } from "sonner";
+import { useForm } from "react-hook-form";
+import {
+  isAuthEmailAllowed,
+  STRONG_PASSWORD_REGEX,
+} from "../../../../../auth.credentials.js";
+import {
+  FORM,
+  firstFormErrorMessage,
+  MSG_SUCCESS_REGISTER,
+} from "../../../messages/userFacing.js";
 
 export default function Register() {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-    const [form, setForm] = useState({
-        email: "",
-        password: "",
-        shop_name: "",
-        shop_username: "",
-    });
-    const [error, setError] = useState(null);
-    const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [treeGiven, setTreeGiven] = useState(0);
+  const [animatedTreeGiven, setAnimatedTreeGiven] = useState(0);
+  const givenPrevRef = useRef(0);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError(null);
-        setLoading(true);
-        const [, err] = await registerApi(form);
-        setLoading(false);
-        if (err) {
-            setError(err);
-            return;
-        }
-        navigate("/login");
+  const {
+    register,
+    handleSubmit,
+    getValues,
+    watch,
+    formState: { errors, isValid, touchedFields, isSubmitted },
+  } = useForm({
+    mode: "onChange",
+    reValidateMode: "onChange",
+    defaultValues: {
+      email: "",
+      password: "",
+      phone_code: "",
+      phone_local: "",
+    },
+  });
+
+  const emailValue = watch("email");
+  const passwordValue = watch("password");
+  const phoneCodeValue = watch("phone_code");
+  const phoneLocalValue = watch("phone_local");
+
+  const onValidSubmit = async (formData) => {
+    setLoading(true);
+    const payload = {
+      email: formData.email.trim(),
+      password: formData.password,
+      phone: formData.phone_local.trim()
+        ? `${(formData.phone_code || "").trim()}${formData.phone_local.replace(/\D/g, "")}`
+        : undefined,
+    };
+    const [, err] = await registerApi(payload);
+    setLoading(false);
+    if (err) {
+      toast.error(err);
+      return;
+    }
+    toast.success(MSG_SUCCESS_REGISTER);
+    navigate("/login");
+  };
+
+  const onInvalidSubmit = (fieldErrors) => {
+    toast.error(
+      firstFormErrorMessage(fieldErrors, ["email", "password", "phone_code", "phone_local"]),
+    );
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    const refreshFromApi = async () => {
+      const [data] = await getTreeImpactApi();
+      if (cancelled || !data) return;
+      setTreeGiven(Math.max(0, Number(data.given || 0)));
     };
 
-    return (
-        <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--app-bg)] px-4 py-10">
-            <div className="w-full max-w-[350px] space-y-6">
-                <div className="border border-[#dbdbdb] bg-white px-8 py-10 sm:rounded-sm">
-                    <h1 className="mb-2 text-center text-xl text-[#262626]">
-                        <BrandWordmark />
-                    </h1>
-                    <p className="mb-6 text-center text-sm font-semibold text-[#8e8e8e]">
-                        Create your place
-                    </p>
+    void refreshFromApi();
+    const timer = setInterval(refreshFromApi, 90_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
 
-                    <form onSubmit={handleSubmit} className="space-y-3">
-                        {error && (
-                            <div className="rounded border border-[#ffccc7] bg-[#fff2f0] px-3 py-2 text-center text-sm text-[#cf1322]">
-                                {error}
-                            </div>
-                        )}
+  useEffect(() => {
+    const target = Math.max(0, Number(treeGiven || 0));
+    const start = givenPrevRef.current;
+    if (start === target) return;
+    const durationMs = 850;
+    let rafId = 0;
+    const startedAt = performance.now();
 
-                        <input
-                            className="w-full rounded border border-[#dbdbdb] bg-[#fafafa] px-2 py-2 text-xs text-[#262626] placeholder:text-[#8e8e8e] focus:border-[var(--brand-e)] focus:bg-white focus:outline-none"
-                            placeholder="Place name"
-                            onChange={(e) =>
-                                setForm({ ...form, shop_name: e.target.value })
-                            }
-                        />
-                        <input
-                            className="w-full rounded border border-[#dbdbdb] bg-[#fafafa] px-2 py-2 text-xs text-[#262626] placeholder:text-[#8e8e8e] focus:border-[var(--brand-e)] focus:bg-white focus:outline-none"
-                            placeholder="Username"
-                            autoComplete="username"
-                            onChange={(e) =>
-                                setForm({ ...form, shop_username: e.target.value })
-                            }
-                        />
-                        <input
-                            className="w-full rounded border border-[#dbdbdb] bg-[#fafafa] px-2 py-2 text-xs text-[#262626] placeholder:text-[#8e8e8e] focus:border-[var(--brand-e)] focus:bg-white focus:outline-none"
-                            placeholder="Email"
-                            autoComplete="email"
-                            onChange={(e) =>
-                                setForm({ ...form, email: e.target.value })
-                            }
-                        />
-                        <input
-                            type="password"
-                            className="w-full rounded border border-[#dbdbdb] bg-[#fafafa] px-2 py-2 text-xs text-[#262626] placeholder:text-[#8e8e8e] focus:border-[var(--brand-e)] focus:bg-white focus:outline-none"
-                            placeholder="Password"
-                            autoComplete="new-password"
-                            onChange={(e) =>
-                                setForm({ ...form, password: e.target.value })
-                            }
-                        />
+    const tick = (now) => {
+      const progress = Math.min((now - startedAt) / durationMs, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const next = Math.round(start + (target - start) * eased);
+      setAnimatedTreeGiven(next);
+      if (progress < 1) {
+        rafId = requestAnimationFrame(tick);
+      } else {
+        givenPrevRef.current = target;
+      }
+    };
 
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="mt-2 w-full rounded-lg bg-[var(--brand-e)] py-1.5 text-sm font-semibold text-white hover:bg-[var(--brand-e-dark)] disabled:opacity-50"
-                        >
-                            {loading ? "Creating…" : "Sign up"}
-                        </button>
-                    </form>
-                </div>
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [treeGiven]);
 
-                <div className="border border-[#dbdbdb] bg-white px-6 py-4 text-center text-sm sm:rounded-sm">
-                    <span className="text-[#262626]">Have an account? </span>
-                    <Link to="/login" className="font-semibold text-[var(--brand-e)] hover:text-[var(--brand-e-dark)]">
-                        Log in
-                    </Link>
-                </div>
+  const showError = (name) => Boolean((touchedFields[name] || isSubmitted) && errors[name]);
+  const errEmail = showError("email");
+  const errPassword = showError("password");
+  const errPhoneCode = showError("phone_code");
+  const errPhoneLocal = showError("phone_local");
 
-                <p className="text-center text-xs">
-                    <Link to="/welcome" className="font-medium text-[var(--brand-e)] hover:text-[var(--brand-e-dark)]">
-                        Why ePatri?
-                    </Link>
-                </p>
+  return (
+    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[#eaf4ef] px-4 py-10">
+      <div className="pointer-events-none absolute -left-16 top-8 h-64 w-64 rounded-full bg-emerald-300/40 blur-3xl" aria-hidden />
+      <div className="pointer-events-none absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-emerald-500/25 blur-3xl" aria-hidden />
+
+      <div className="relative w-full max-w-[430px] space-y-4">
+        <section className="overflow-hidden rounded-3xl border border-white/55 bg-white/55 p-6 shadow-[0_24px_60px_-30px_rgba(15,23,42,0.35)] backdrop-blur-xl sm:p-7">
+          <div className="flex justify-center">
+            <BrandWordmark />
+          </div>
+          <div className="mt-5 rounded-2xl border border-white/70 bg-white/60 px-4 py-3 text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#64748b]">Given life to trees</p>
+            <p className="mt-1 text-3xl font-black text-[#166534]">{animatedTreeGiven.toLocaleString()}</p>
+          </div>
+          <p className="mt-3 rounded-2xl border border-emerald-100 bg-emerald-100/70 px-4 py-2.5 text-center text-xs font-medium leading-relaxed text-emerald-800 hover:underline hover:bg-emerald-100">
+            <Link to="/welcome">
+              Every digital menu helps reduce paper waste. Join today and help give more life to trees.
+            </Link>
+          </p>
+
+          <form onSubmit={handleSubmit(onValidSubmit, onInvalidSubmit)} className="mt-6 space-y-3" noValidate>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[#526075]">Email</span>
+              <input
+                {...register("email", {
+                  required: FORM.emailRequired,
+                  pattern: {
+                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                    message: FORM.emailLooksInvalid,
+                  },
+                  validate: (v) =>
+                    isAuthEmailAllowed(String(v ?? "").trim()) || FORM.emailProviderNotAllowed,
+                })}
+                className={`w-full rounded-2xl border bg-white/80 px-3 py-3 text-sm text-[#0f172a] outline-none transition placeholder:text-[#94a3b8] focus:bg-white ${errEmail ? "border-red-300 focus:border-red-300" : "border-white/80 focus:border-emerald-300"
+                  }`}
+                placeholder="you@gmail.com"
+                autoComplete="email"
+                aria-invalid={errEmail}
+              />
+              {errEmail ? <p className="text-xs text-red-600">{errors.email?.message}</p> : null}
+            </label>
+
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[#526075]">Password</span>
+              <input
+                type="password"
+                {...register("password", {
+                  required: FORM.passwordRequired,
+                  pattern: {
+                    value: STRONG_PASSWORD_REGEX,
+                    message: FORM.passwordRules,
+                  },
+                })}
+                className={`w-full rounded-2xl border bg-white/80 px-3 py-3 text-sm text-[#0f172a] outline-none transition placeholder:text-[#94a3b8] focus:bg-white ${errPassword ? "border-red-300 focus:border-red-300" : "border-white/80 focus:border-emerald-300"
+                  }`}
+                placeholder="Create a secure password"
+                autoComplete="new-password"
+                aria-invalid={errPassword}
+              />
+              {errPassword ? <p className="text-xs text-red-600">{errors.password?.message}</p> : null}
+            </label>
+
+            <div className="block space-y-1.5">
+              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[#526075]">Phone (optional)</span>
+              <div className="grid grid-cols-[110px_1fr] gap-0.5">
+                <input
+                  {...register("phone_code", {
+                    validate: (value) => {
+                      const code = String(value || "").trim();
+                      const localDigits = String(getValues("phone_local") || "").replace(/\D/g, "");
+                      const hasCode = code.length > 0;
+                      const hasLocal = localDigits.length > 0;
+                      if (hasLocal && !hasCode) return FORM.phoneCountryRequired;
+                      if (hasCode && !/^\+\d{1,4}$/.test(code)) return FORM.phoneCountryFormat;
+                      return true;
+                    },
+                  })}
+                  className={`rounded-l-2xl border border-r-black/20 bg-white/80 px-3 py-3 text-sm text-[#0f172a] outline-none transition placeholder:text-[#94a3b8] focus:bg-white ${errPhoneCode ? "border-red-300 focus:border-red-300" : "border-white/80 focus:border-emerald-300"
+                    }`}
+                  placeholder="+91"
+                  inputMode="tel"
+                  autoComplete="tel-country-code"
+                  aria-invalid={errPhoneCode}
+                />
+                <input
+                  {...register("phone_local", {
+                    validate: (value) => {
+                      const digits = String(value || "").replace(/\D/g, "");
+                      const code = String(getValues("phone_code") || "").trim();
+                      const hasDigits = digits.length > 0;
+                      const hasCode = code.length > 0;
+                      if (hasCode && !hasDigits) return FORM.phoneNumberRequired;
+                      if (hasDigits && (digits.length < 6 || digits.length > 14))
+                        return FORM.phoneDigitsLength;
+                      return true;
+                    },
+                  })}
+                  className={`w-full rounded-r-2xl border bg-white/80 px-3 py-3 text-sm text-[#0f172a] outline-none transition placeholder:text-[#94a3b8] focus:bg-white ${errPhoneLocal ? "border-red-300 focus:border-red-300" : "border-white/80 focus:border-emerald-300"
+                    }`}
+                  placeholder="Phone number"
+                  autoComplete="tel-national"
+                  aria-invalid={errPhoneLocal}
+                />
+              </div>
+              {errPhoneCode ? <p className="text-xs text-red-600">{errors.phone_code?.message}</p> : null}
+              {errPhoneLocal ? <p className="text-xs text-red-600">{errors.phone_local?.message}</p> : null}
             </div>
-        </div>
-    );
+
+            <button
+              type="submit"
+              disabled={loading || !isValid}
+              className="mt-1 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#111827] px-4 py-3 text-sm font-bold text-white shadow-md shadow-black/10 transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading ? "Creating account…" : "Sign up"}
+            </button>
+          </form>
+
+          <div className="mt-4 border-t border-white/70 pt-4 text-center text-sm text-[#334155]">
+            <p>
+              Already have an account?{" "}
+              <Link to="/login" className="font-semibold text-(--brand-e) hover:text-(--brand-e-dark)">
+                Log in
+              </Link>
+            </p>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
 }

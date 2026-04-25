@@ -19,7 +19,14 @@ function bustCacheUrl(url, version) {
 /**
  * Renders PDF pages to canvases — works on Android/iOS where `<iframe src=pdf>` often shows only “Open”.
  */
-export default function PdfCanvasPreview({ url, file, version = 0, className = "" }) {
+export default function PdfCanvasPreview({
+  url,
+  file,
+  version = 0,
+  className = "",
+  /** Inside narrow mockups (e.g. phone preview): scale to real width, no viewport-tall max-height. */
+  phonePreview = false,
+}) {
   const wrapRef = useRef(null);
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState(null);
@@ -55,7 +62,10 @@ export default function PdfCanvasPreview({ url, file, version = 0, className = "
         const pdf = await loadingTask.promise;
         if (cancelled) return;
 
-        const maxW = Math.max(280, Math.min(920, wrap.clientWidth || 920));
+        const cw = wrap.clientWidth || 320;
+        const maxW = phonePreview
+          ? Math.max(64, Math.min(920, cw))
+          : Math.max(280, Math.min(920, cw));
 
         for (let i = 1; i <= pdf.numPages; i++) {
           if (cancelled) return;
@@ -95,8 +105,8 @@ export default function PdfCanvasPreview({ url, file, version = 0, className = "
 
   return (
     <div
-      className={`relative overflow-y-auto rounded-lg border border-[#dbdbdb] bg-[#2a2a2a] ${className}`}
-      style={{ maxHeight: "min(82vh, 780px)" }}
+      className={`relative rounded-lg border border-[#dbdbdb] bg-[#2a2a2a] ${phonePreview ? "overflow-visible" : "overflow-y-auto"} ${className}`}
+      style={phonePreview ? undefined : { maxHeight: "min(82vh, 780px)" }}
     >
       {status === "loading" && (
         <div className="absolute inset-0 z-10 flex min-h-[220px] items-center justify-center bg-[#2a2a2a]/95 text-sm text-[#a8a8a8]">

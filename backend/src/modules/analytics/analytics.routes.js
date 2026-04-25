@@ -2,6 +2,7 @@ import {
   trackMenuViewController,
   getAnalyticsSummaryController,
   getAnalyticsDetailController,
+  streamAnalyticsEventsController,
 } from './analytics.controller.js';
 
 export async function analyticsRoutes(fastify) {
@@ -15,5 +16,10 @@ export async function analyticsRoutes(fastify) {
   fastify.get('/shop/:shop_username/details', {
     preHandler: [fastify.authenticate],
     handler: getAnalyticsDetailController,
+  });
+
+  fastify.get('/shop/:shop_username/stream', {
+    preHandler: [fastify.authenticate],
+    handler: streamAnalyticsEventsController,
   });
 }

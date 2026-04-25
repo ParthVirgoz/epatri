@@ -1,292 +1,865 @@
 ---
-const partnerSignupUrl = import.meta.env.PUBLIC_PARTNER_SIGNUP_URL?.replace(/\/$/, "") || "";
+import BrandMark from "./BrandMark.astro";
+const partnerSignupUrl = (
+	(import.meta as any).env?.PUBLIC_PARTNER_SIGNUP_URL || ""
+).replace(/\/$/, "");
+const publicApiUrl =
+	((import.meta as any).env?.PUBLIC_API_URL as string) ||
+	((import.meta as any).env?.MODE === "production"
+		? "https://epatri-be.vercel.app/api/v1"
+		: "http://localhost:5000/api/v1");
+
+let impactStats = {
+	saved: 0,
+	given: 0,
+	menus_created: 0,
+	business_growth_percentage: 0,
+	environment_saving_percentage: 0,
+	area_coverage_count: 0,
+};
+
+try {
+	const res = await fetch(`${publicApiUrl}/public/impact/trees`);
+	if (res.ok) {
+		const payload = await res.json();
+		impactStats = {
+			saved: Number(payload?.saved || impactStats.saved),
+			given: Number(payload?.given || impactStats.given),
+			menus_created: Number(payload?.menus_created || 0),
+			business_growth_percentage: Number(payload?.business_growth_percentage || 0),
+			environment_saving_percentage: Number(payload?.environment_saving_percentage || 0),
+			area_coverage_count: Number(payload?.area_coverage_count || 0),
+		};
+	}
+} catch {
+	// Keep fallback counters if API is unreachable during static build/runtime.
+}
 ---
 
 <div class="landing">
-	<header class="landing__header">
-		<a href="/" class="landing__logo" aria-label="ePatri home">
-			<span class="landing__logo-e">e</span><span class="landing__logo-patri">Patri</span>
+	<div class="landing__orb landing__orb--green" aria-hidden></div>
+	<div class="landing__orb landing__orb--orange" aria-hidden></div>
+	<div class="landing__mesh" aria-hidden></div>
+
+	<header class="topbar">
+		<a href="/" class="logo" aria-label="ePatri home">
+			<BrandMark class="logo__img" />
 		</a>
-		{partnerSignupUrl ? (
-			<a href={`${partnerSignupUrl}/register`} class="landing__header-cta">
-				List your menu
-			</a>
-		) : (
-			<span class="landing__header-note">Partner signup URL coming soon</span>
-		)}
+		<nav class="topbar__actions">
+			{
+				partnerSignupUrl ? (
+					<a
+						href={partnerSignupUrl + "/register"}
+						class="btn btn--solid"
+					>
+						Get started
+					</a>
+				) : (
+					<span class="topbar__note">Signup URL pending</span>
+				)
+			}
+		</nav>
 	</header>
 
 	<main>
-		<section class="hero">
-			<p class="eyebrow">Digital menus · One link</p>
-			<h1>Paper menus cost trees. <span class="hero__accent">E-menus don&apos;t.</span></h1>
-			<p class="lede">
-				<strong>ePatri</strong> is a simple way for restaurants and cafés to share a menu from a single link —
-				your guests open a clean digital menu on their phone, and you skip reprinting every time a dish changes.
-			</p>
+		<section class="hero reveal r1">
+			<div class="hero__panel">
+				<p class="eyebrow">Customer view · environment first</p>
+				<!-- <h1>
+					Ask for the ePatri menu and
+					<span class="hero__accent">help save trees with every table visit.</span>
+				</h1> -->
+				<h1>
+					Paper menus cost trees. <span class="hero__accent"
+						>e<span style="color: #FF9423;">Patri</span> is the new era
+						of menu sharing.</span
+					>
+				</h1>
+				<p class="lede">
+					Every time guests choose ePatri instead of printed menus,
+					businesses reduce reprints, cut waste, and support healthier
+					environmental outcomes through one simple daily habit.
+				</p>
+				<div class="hero__actions">
+					{
+						partnerSignupUrl ? (
+							<a
+								href={partnerSignupUrl + "/register"}
+								class="btn btn--solid"
+							>
+								Create your menu
+							</a>
+						) : null
+					}
+				</div>
+				<div class="hero__proof">
+					<span>Ask once: "Do you have ePatri menu?"</span>
+					<span>No app install needed</span>
+					<span>Less paper, more trees saved</span>
+				</div>
+			</div>
 		</section>
 
-		<section class="panel">
-			<h2>What is ePatri?</h2>
+		<section class="ticker reveal r2">
+			<div class="ticker__viewport">
+				<div class="ticker__track">
+					<div class="ticker__group">
+						<span>QR menus</span><span>•</span><span>Live updates</span><span>•</span>
+						<span>Insights</span><span>•</span><span>Instant sharing</span><span>•</span>
+						<span>QR menus</span><span>•</span><span>Live updates</span><span>•</span>
+						<span>Insights</span><span>•</span><span>Instant sharing</span>
+					</div>
+					<div class="ticker__group" aria-hidden="true">
+						<span>QR menus</span><span>•</span><span>Live updates</span><span>•</span>
+						<span>Insights</span><span>•</span><span>Instant sharing</span><span>•</span>
+						<span>QR menus</span><span>•</span><span>Live updates</span><span>•</span>
+						<span>Insights</span><span>•</span><span>Instant sharing</span>
+					</div>
+					<div class="ticker__group" aria-hidden="true">
+						<span>QR menus</span><span>•</span><span>Live updates</span><span>•</span>
+						<span>Insights</span><span>•</span><span>Instant sharing</span><span>•</span>
+						<span>QR menus</span><span>•</span><span>Live updates</span><span>•</span>
+						<span>Insights</span><span>•</span><span>Instant sharing</span>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section class="impact-stats reveal r3">
+			<article class="impact-stat">
+				<p class="impact-stat__label">
+					Trees impacted
+				</p>
+				<p class="impact-stat__value">
+					<span
+						class="js-count-up"
+						data-target={Math.max(0, impactStats.saved + impactStats.given)}
+						data-suffix=""
+					>
+						0
+					</span>
+				</p>
+			</article>
+			<article class="impact-stat">
+				<p class="impact-stat__label">Menus created</p>
+				<p class="impact-stat__value">
+					<span
+						class="js-count-up"
+						data-target={Math.max(0, impactStats.menus_created)}
+						data-suffix=""
+					>
+						0
+					</span>
+				</p>
+			</article>
+			<article class="impact-stat">
+				<p class="impact-stat__label">Environment saving</p>
+				<p class="impact-stat__value">
+					<span
+						class="js-count-up"
+						data-target={Math.round(impactStats.environment_saving_percentage)}
+						data-suffix="%"
+					>
+						0%
+					</span>
+				</p>
+			</article>
+			<article class="impact-stat">
+				<p class="impact-stat__label">Area covered</p>
+				<p class="impact-stat__value">
+					<span
+						class="js-count-up"
+						data-target={Math.max(0, impactStats.area_coverage_count)}
+						data-suffix=" Acres"
+					>
+						0 Acres
+					</span>
+				</p>
+			</article>
+		</section>
+
+		<section class="split reveal r4">
+			<article class="glass-card">
+				<p class="chip">For customers</p>
+				<h2>One ask at the table can reduce paper waste</h2>
+				<ul>
+					<li>Ask for ePatri menu instead of printed copy</li>
+					<li>Scan once and open instantly on any phone</li>
+					<li>Support daily tree and environment impact</li>
+				</ul>
+			</article>
+			<article class="glass-card">
+				<p class="chip chip--alt">For environment</p>
+				<h2>Less printing means less waste and wider impact area</h2>
+				<ul>
+					<li>Fewer reprints lower paper and ink usage</li>
+					<li>Digital updates reduce disposal cycles</li>
+					<li>Daily adoption expands environmental care coverage</li>
+				</ul>
+			</article>
+		</section>
+
+		<section class="features reveal r5">
+			<article class="feature">
+				<h3>Customer Action</h3>
+				<p>
+					Choose ePatri menu at cafes and restaurants and make each
+					meal a greener choice.
+				</p>
+			</article>
+			<article class="feature">
+				<h3>Daily Care</h3>
+				<p>
+					Small daily digital choices compound into large long-term
+					environmental care.
+				</p>
+			</article>
+			<article class="feature">
+				<h3>Area Coverage</h3>
+				<p>
+					As more outlets and guests adopt ePatri, tree and
+					environment care impact spreads to more areas.
+				</p>
+			</article>
+		</section>
+
+		<section class="impact reveal r6">
+			<h2>How ePatri supports trees and environment</h2>
 			<p>
-				The name pairs <span class="c-e">e</span> (electronic, easy) with <span class="c-p">Patri</span> — a nod
-				to care for place and planet. We built a lightweight flow: you keep your menu as a PDF, we host the
-				guest experience, and you get a shareable link for Instagram bios, QR codes, and chat.
+				Paper menus change often, and every reprint adds cost, paper
+				use, transport, and disposal load. By asking for ePatri menu,
+				customers help businesses shift to one always-updated digital
+				menu and reduce avoidable waste.
 			</p>
 		</section>
 
-		<section class="panel panel--earth">
-			<h2>How you help the Earth</h2>
-			<ul>
-				<li>
-					<strong>Fewer paper menus</strong> — no stacks thrown away after each price or dish update.
-				</li>
-				<li>
-					<strong>Less ink and transport</strong> — one file online replaces many print runs.
-				</li>
-				<li>
-					<strong>A signal to venues</strong> — when you ask for an <em>e-menu</em>, you remind owners that
-					guests care about waste. Small asks add up.
-				</li>
-			</ul>
-		</section>
-
-		<section class="panel">
-			<h2>Running a business? Here&apos;s how to join</h2>
-			<ol class="steps">
-				<li>
-					<strong>Create a partner account</strong> on the ePatri admin app{partnerSignupUrl ? " — " : "."}
-					{partnerSignupUrl ? (
-						<a href={`${partnerSignupUrl}/register`} target="_blank">Open signup</a>
-					) : (
-						<span class="muted">Set <code>PUBLIC_PARTNER_SIGNUP_URL</code> to your admin URL for a direct link.</span>
-					)}
-				</li>
-				<li>
-					<strong>Upload your menu PDF</strong> and pick a short username for your public link.
-				</li>
-				<li>
-					<strong>Share your link</strong> everywhere guests look — bio, table QR, receipts, and messages.
-				</li>
-			</ol>
-		</section>
-
-		<section class="panel panel--patron">
-			<h2>Ordering as a guest?</h2>
+		<section class="cta reveal r7">
+			<h2>Ready to go digital?</h2>
 			<p>
-				When your favourite spot sends an ePatri link, open it on your phone — that&apos;s their live menu. If
-				they still only have laminated paper, it&apos;s okay to say you&apos;d love an <strong>e-menu</strong> next
-				time. You&apos;re not nagging; you&apos;re helping them save money and waste, and you&apos;re part of a
-				bigger shift away from throwaway paper.
+				Launch your menu page in minutes. Founding partners start free
+				while we scale.
 			</p>
-		</section>
-
-		<section class="footer-cta">
-			<p>
-				Together we can make <span class="c-e">e</span><span class="c-p">Patri</span> the norm — better for
-				businesses, guests, and the trees we keep standing.
-			</p>
+			<a href={partnerSignupUrl + "/register"} class="btn btn--solid"
+				>Start free</a
+			>
 		</section>
 	</main>
 
-	<footer class="landing__footer">
-		<p class="muted small">© {new Date().getFullYear()} ePatri</p>
+	<footer class="footer">
+		<p>© {new Date().getFullYear()} ePatri</p>
 	</footer>
 </div>
+
+<script is:inline>
+	(() => {
+		const runCounter = (el) => {
+			if (el.getAttribute("data-animated") === "1") return;
+			const target = Math.max(0, Number(el.getAttribute("data-target") || 0));
+			const suffix = el.getAttribute("data-suffix") || "";
+			const durationMs = 1800;
+			const startedAt = performance.now();
+			const step = (now) => {
+				const progress = Math.min((now - startedAt) / durationMs, 1);
+				const eased = 1 - Math.pow(1 - progress, 3);
+				const value = Math.round(target * eased);
+				el.textContent = `${value.toLocaleString()}${suffix}`;
+				if (progress < 1) {
+					requestAnimationFrame(step);
+				} else {
+					el.setAttribute("data-animated", "1");
+				}
+			};
+			requestAnimationFrame(step);
+		};
+
+		const initCountersWhenVisible = () => {
+			const counters = document.querySelectorAll(".js-count-up");
+			if (!counters.length) return;
+			const impactSection = document.querySelector(".impact-stats");
+			if (!impactSection) {
+				counters.forEach((el) => runCounter(el));
+				return;
+			}
+
+			const triggerAll = () => counters.forEach((el) => runCounter(el));
+			const rect = impactSection.getBoundingClientRect();
+			const viewportHeight =
+				window.innerHeight || document.documentElement.clientHeight || 0;
+			const alreadyVisible = rect.top < viewportHeight * 0.9 && rect.bottom > 0;
+			if (alreadyVisible) {
+				triggerAll();
+				return;
+			}
+
+			if (!("IntersectionObserver" in window)) {
+				triggerAll();
+				return;
+			}
+
+			const observer = new IntersectionObserver((entries) => {
+				entries.forEach((entry) => {
+					if (!entry.isIntersecting) return;
+					triggerAll();
+					observer.disconnect();
+				});
+			}, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
+			observer.observe(impactSection);
+			// Hard fallback if observer never fires due edge browser behavior.
+			setTimeout(triggerAll, 1400);
+		};
+
+		const boot = () => setTimeout(initCountersWhenVisible, 0);
+		if (document.readyState === "loading") {
+			document.addEventListener("DOMContentLoaded", boot);
+		} else {
+			boot();
+		}
+		window.addEventListener("load", boot);
+		window.addEventListener("pageshow", boot);
+		document.addEventListener("astro:page-load", boot);
+	})();
+</script>
 
 <style>
 	.landing {
 		--e: #1e9459;
-		--patri: #ff9423;
-		--ink: #1a1a1a;
-		--muted: #5c5c5c;
-		--bg: #f7faf8;
-		--card: #ffffff;
-		min-height: 100vh;
+		--p: #ff9423;
+		--bg: #070707;
+		--line: rgba(255, 255, 255, 0.1);
+		--txt: #f5f5f5;
+		--muted: #b3b3b3;
 		background: var(--bg);
-		color: var(--ink);
+		color: var(--txt);
+		min-height: 100vh;
+		position: relative;
+		overflow-x: clip;
+	}
+	.landing__orb {
+		position: fixed;
+		width: 25rem;
+		height: 25rem;
+		border-radius: 999px;
+		filter: blur(110px);
+		opacity: 0.2;
+		pointer-events: none;
+		animation: drift 15s ease-in-out infinite;
+	}
+	.landing__orb--green {
+		top: -8rem;
+		left: -7rem;
+		background: #1e9459;
+	}
+	.landing__orb--orange {
+		right: -8rem;
+		bottom: -10rem;
+		background: #ff9423;
+		animation-direction: reverse;
+	}
+	.landing__mesh {
+		position: fixed;
+		inset: -20vh -10vw;
+		pointer-events: none;
+		z-index: 0;
+		background:
+			radial-gradient(
+				circle at 20% 22%,
+				rgba(30, 148, 89, 0.15),
+				transparent 45%
+			),
+			radial-gradient(
+				circle at 82% 78%,
+				rgba(255, 148, 35, 0.16),
+				transparent 42%
+			),
+			repeating-linear-gradient(
+				90deg,
+				rgba(255, 255, 255, 0.03) 0 1px,
+				transparent 1px 78px
+			),
+			repeating-linear-gradient(
+				0deg,
+				rgba(255, 255, 255, 0.02) 0 1px,
+				transparent 1px 78px
+			);
+		mask-image: radial-gradient(
+			circle at 50% 42%,
+			#000 30%,
+			transparent 78%
+		);
+		opacity: 0.45;
 	}
 
-	.landing__header {
+	.topbar {
+		position: sticky;
+		top: 0;
+		z-index: 20;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 1rem;
-		padding: 1rem 1.25rem;
-		border-bottom: 1px solid #e5e5e5;
-		background: rgba(255, 255, 255, 0.92);
-		backdrop-filter: blur(8px);
-		position: sticky;
-		top: 0;
-		z-index: 10;
+		padding: 0.2rem 1.1rem;
+		border-bottom: 1px solid var(--line);
+		background: rgba(7, 7, 7, 0.75);
+		backdrop-filter: blur(10px);
 	}
-
-	.landing__logo {
-		font-size: 1.35rem;
-		font-weight: 700;
-		letter-spacing: -0.02em;
+	.logo {
+		display: inline-flex;
+		align-items: center;
 		text-decoration: none;
 	}
-
-	.landing__logo-e {
-		color: var(--e);
+	.logo__img {
+		width: clamp(6.3rem, 10vw, 7.3rem);
+		height: auto;
+		display: block;
 	}
-	.landing__logo-patri {
-		color: var(--patri);
+	.topbar__actions {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.55rem;
 	}
-
-	.landing__header-cta {
-		flex-shrink: 0;
-		padding: 0.5rem 1rem;
-		border-radius: 999px;
-		background: var(--e);
-		color: #fff;
-		font-size: 0.875rem;
+	.topbar__link {
+		color: #e0e0e0;
+		text-decoration: none;
+		font-size: 0.84rem;
 		font-weight: 600;
-		text-decoration: none;
+		padding: 0.45rem 0.78rem;
+		border-radius: 999px;
+		border: 1px solid transparent;
 	}
-	.landing__header-cta:hover {
-		filter: brightness(0.95);
+	.topbar__link:hover {
+		border-color: var(--line);
+		background: rgba(255, 255, 255, 0.05);
 	}
-
-	.landing__header-note {
-		font-size: 0.75rem;
-		color: var(--muted);
-		max-width: 10rem;
-		text-align: right;
-		line-height: 1.3;
+	.topbar__note {
+		font-size: 0.72rem;
+		color: #9b9b9b;
 	}
 
 	main {
-		max-width: 40rem;
+		position: relative;
+		z-index: 1;
+		max-width: 70rem;
 		margin: 0 auto;
-		padding: 2rem 1.25rem 4rem;
+		padding: 2rem 1.2rem 4rem;
 	}
-
 	.hero {
-		margin-bottom: 2.5rem;
+		text-align: center;
+		padding: 3rem 0 2rem;
 	}
-
+	.hero__panel {
+		max-width: 60rem;
+		margin: 0 auto;
+		padding: clamp(1.15rem, 3vw, 2rem);
+		border-radius: 1.35rem;
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		background:
+			linear-gradient(
+				170deg,
+				rgba(255, 255, 255, 0.06),
+				rgba(255, 255, 255, 0.02)
+			),
+			radial-gradient(
+				circle at 20% 12%,
+				rgba(30, 148, 89, 0.14),
+				transparent 40%
+			),
+			radial-gradient(
+				circle at 85% 88%,
+				rgba(255, 148, 35, 0.14),
+				transparent 45%
+			);
+		box-shadow: 0 26px 64px -34px rgba(0, 0, 0, 0.72);
+	}
 	.eyebrow {
-		font-size: 0.7rem;
-		font-weight: 600;
-		letter-spacing: 0.14em;
+		margin: 0 0 0.7rem;
+		font-size: 0.72rem;
+		letter-spacing: 0.17em;
 		text-transform: uppercase;
-		color: var(--e);
-		margin: 0 0 0.75rem;
+		color: #8cb69f;
 	}
-
 	.hero h1 {
-		font-size: clamp(1.75rem, 5vw, 2.35rem);
-		font-weight: 700;
-		line-height: 1.15;
-		margin: 0 0 1rem;
-		letter-spacing: -0.03em;
+		margin: 0;
+		font-weight: 800;
+		font-size: clamp(2.2rem, 7vw, 5rem);
+		line-height: 0.95;
+		letter-spacing: -0.04em;
 	}
-
 	.hero__accent {
-		color: var(--e);
+		background: linear-gradient(
+			90deg,
+			#1e9459 0%,
+			#63b487 35%,
+			#ff9423 70%,
+			#1e9459 100%
+		);
+		background-size: 220% 100%;
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+		animation: shimmer 8s linear infinite;
 	}
-
 	.lede {
-		font-size: 1.05rem;
-		line-height: 1.55;
+		max-width: 45rem;
+		margin: 1rem auto 0;
 		color: var(--muted);
-		margin: 0;
-	}
-
-	.panel {
-		background: var(--card);
-		border: 1px solid #e8e8e8;
-		border-radius: 1rem;
-		padding: 1.35rem 1.25rem;
-		margin-bottom: 1.25rem;
-		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-	}
-
-	.panel h2 {
-		font-size: 1.05rem;
-		font-weight: 600;
-		margin: 0 0 0.75rem;
-	}
-
-	.panel p,
-	.panel li {
-		font-size: 0.95rem;
-		line-height: 1.55;
-		color: var(--muted);
-		margin: 0;
-	}
-
-	.panel ul {
-		margin: 0;
-		padding-left: 1.1rem;
-	}
-	.panel li {
-		margin-bottom: 0.5rem;
-	}
-
-	.panel--earth {
-		border-color: #cfe8d9;
-		background: linear-gradient(160deg, #f4fbf7 0%, #fffaf5 100%);
-	}
-
-	.panel--patron {
-		border-color: #fde6cc;
-		background: #fffaf5;
-	}
-
-	.c-e {
-		color: var(--e);
-		font-weight: 600;
-	}
-	.c-p {
-		color: var(--patri);
-		font-weight: 600;
-	}
-
-	.steps {
-		margin: 0;
-		padding-left: 1.1rem;
-		font-size: 0.95rem;
-		line-height: 1.55;
-		color: var(--muted);
-	}
-	.steps li {
-		margin-bottom: 0.65rem;
-	}
-	.steps a {
-		color: var(--e);
-		font-weight: 600;
-	}
-
-	code {
-		font-size: 0.8rem;
-		background: #f0f0f0;
-		padding: 0.1rem 0.35rem;
-		border-radius: 4px;
-	}
-
-	.muted {
-		color: var(--muted);
-	}
-	.small {
-		font-size: 0.8rem;
-	}
-
-	.footer-cta {
-		text-align: center;
-		padding: 1.5rem 0.5rem 0;
 		font-size: 1rem;
-		font-weight: 500;
-		line-height: 1.5;
-		color: var(--ink);
+		line-height: 1.6;
+	}
+	.hero__actions {
+		margin-top: 1.25rem;
+		display: flex;
+		justify-content: center;
+		flex-wrap: wrap;
+		gap: 0.7rem;
+	}
+	.hero__proof {
+		margin-top: 1rem;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.55rem;
+		justify-content: center;
+	}
+	.hero__proof span {
+		border: 1px solid rgba(255, 255, 255, 0.11);
+		background: rgba(255, 255, 255, 0.03);
+		padding: 0.36rem 0.68rem;
+		border-radius: 999px;
+		font-size: 0.72rem;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: #c8c8c8;
 	}
 
-	.landing__footer {
-		text-align: center;
-		padding: 1rem 1.25rem 2rem;
-		border-top: 1px solid #eaeaea;
+	.btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.72rem 1.08rem;
+		border-radius: 999px;
+		font-size: 0.9rem;
+		font-weight: 600;
+		text-decoration: none;
+		transition:
+			transform 0.2s ease,
+			box-shadow 0.2s ease,
+			background 0.2s ease;
+	}
+	.btn--solid {
 		background: #fff;
+		color: #111;
+	}
+	.btn--solid {
+		position: relative;
+		overflow: hidden;
+		box-shadow:
+			0 10px 30px rgba(255, 255, 255, 0.08),
+			0 1px 0 rgba(255, 255, 255, 0.6) inset;
+	}
+	.btn--solid::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(
+			110deg,
+			transparent 24%,
+			rgba(255, 255, 255, 0.55) 50%,
+			transparent 78%
+		);
+		transform: translateX(-130%);
+		animation: sweep 4.5s ease-in-out infinite;
+		pointer-events: none;
+	}
+	.btn--solid:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 12px 30px rgba(255, 255, 255, 0.2);
+	}
+	.btn--ghost {
+		color: #f2f2f2;
+		background: rgba(255, 255, 255, 0.05);
+		border: 1px solid var(--line);
+	}
+	.btn--ghost:hover {
+		background: rgba(255, 255, 255, 0.1);
+	}
+
+	.ticker {
+		border-top: 1px solid var(--line);
+		border-bottom: 1px solid var(--line);
+		margin: 1.3rem 0 2rem;
+	}
+	.ticker__viewport {
+		overflow: hidden;
+	}
+	.ticker__track {
+		display: flex;
+		width: max-content;
+		padding: 0.72rem 0;
+		color: #8d8d8d;
+		text-transform: uppercase;
+		letter-spacing: 0.11em;
+		font-size: 0.72rem;
+		animation: ticker-scroll 18s linear infinite;
+		will-change: transform;
+	}
+	.ticker__group {
+		display: flex;
+		flex: 0 0 auto;
+		white-space: nowrap;
+		gap: 1.1rem;
+		padding-right: 1.1rem;
+	}
+	.ticker:hover .ticker__track {
+		animation-play-state: paused;
+	}
+
+	.split {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.9rem;
+	}
+	.glass-card {
+		background: rgba(255, 255, 255, 0.04);
+		border: 1px solid var(--line);
+		border-radius: 1rem;
+		padding: 1.2rem;
+		backdrop-filter: blur(10px);
+		transition:
+			transform 0.24s ease,
+			border-color 0.24s ease,
+			box-shadow 0.24s ease;
+	}
+	.glass-card:hover {
+		transform: translateY(-3px);
+		border-color: rgba(255, 255, 255, 0.2);
+		box-shadow: 0 18px 36px rgba(0, 0, 0, 0.35);
+	}
+	.chip {
+		margin: 0 0 0.65rem;
+		font-size: 0.66rem;
+		text-transform: uppercase;
+		letter-spacing: 0.14em;
+		color: #9ecab1;
+		font-weight: 700;
+	}
+	.chip--alt {
+		color: #ffca95;
+	}
+	.glass-card h2 {
+		margin: 0 0 0.6rem;
+		font-size: 1.2rem;
+		line-height: 1.2;
+		letter-spacing: -0.02em;
+	}
+	.glass-card ul {
+		margin: 0;
+		padding-left: 1.1rem;
+		color: var(--muted);
+	}
+	.glass-card li {
+		margin-bottom: 0.42rem;
+		font-size: 0.92rem;
+	}
+
+	.features {
+		margin-top: 1.1rem;
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 0.8rem;
+	}
+	.impact-stats {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 0.8rem;
+		margin: 0.35rem 0 1rem;
+	}
+	.impact-stat {
+		border: 1px solid var(--line);
+		background: linear-gradient(
+			170deg,
+			rgba(255, 255, 255, 0.07),
+			rgba(255, 255, 255, 0.02)
+		);
+		border-radius: 0.9rem;
+		padding: 1rem;
+		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+	}
+	.impact-stat__label {
+		margin: 0;
+		font-size: 0.72rem;
+		text-transform: uppercase;
+		letter-spacing: 0.11em;
+		color: #9f9f9f;
+	}
+	.impact-stat__value {
+		margin: 0.34rem 0 0;
+		font-size: clamp(1.2rem, 2vw, 1.55rem);
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		color: #f2f2f2;
+	}
+	.feature {
+		border-radius: 0.9rem;
+		border: 1px solid var(--line);
+		background: rgba(255, 255, 255, 0.03);
+		padding: 1rem;
+	}
+	.feature {
+		transition:
+			border-color 0.24s ease,
+			transform 0.24s ease,
+			background 0.24s ease;
+	}
+	.feature:hover {
+		transform: translateY(-3px);
+		border-color: rgba(255, 255, 255, 0.2);
+		background: rgba(255, 255, 255, 0.05);
+	}
+	.feature h3 {
+		margin: 0 0 0.35rem;
+		font-size: 0.88rem;
+		text-transform: uppercase;
+		letter-spacing: 0.12em;
+		color: #d6d6d6;
+	}
+	.feature p {
+		margin: 0;
+		color: #a8a8a8;
+		font-size: 0.88rem;
+		line-height: 1.5;
+	}
+
+	.impact,
+	.cta {
+		margin-top: 1.1rem;
+		border-radius: 1rem;
+		border: 1px solid var(--line);
+		background: linear-gradient(
+			160deg,
+			rgba(255, 255, 255, 0.04),
+			rgba(255, 255, 255, 0.02)
+		);
+		padding: 1.1rem 1.2rem;
+	}
+	.impact h2,
+	.cta h2 {
+		margin: 0 0 0.5rem;
+		font-size: 1.15rem;
+		letter-spacing: -0.02em;
+	}
+	.impact p,
+	.cta p {
+		margin: 0;
+		color: var(--muted);
+		line-height: 1.6;
+	}
+	.cta .btn {
+		margin-top: 0.9rem;
+	}
+
+	.footer {
+		text-align: center;
+		border-top: 1px solid var(--line);
+		padding: 1rem 1rem 1.8rem;
+		color: #888;
+		font-size: 0.8rem;
+	}
+
+	.reveal {
+		opacity: 0;
+		transform: translateY(16px);
+		animation: reveal 0.65s ease forwards;
+	}
+	.r1 {
+		animation-delay: 0.05s;
+	}
+	.r2 {
+		animation-delay: 0.11s;
+	}
+	.r3 {
+		animation-delay: 0.16s;
+	}
+	.r4 {
+		animation-delay: 0.22s;
+	}
+	.r5 {
+		animation-delay: 0.28s;
+	}
+	.r6 {
+		animation-delay: 0.34s;
+	}
+	.r7 {
+		animation-delay: 0.4s;
+	}
+
+	@keyframes reveal {
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+	@keyframes shimmer {
+		from {
+			background-position: 0% 0;
+		}
+		to {
+			background-position: 220% 0;
+		}
+	}
+	@keyframes drift {
+		0%,
+		100% {
+			transform: translate(0, 0) scale(1);
+		}
+		50% {
+			transform: translate(16px, 18px) scale(1.04);
+		}
+	}
+	@keyframes ticker-scroll {
+		from {
+			transform: translate3d(0, 0, 0);
+		}
+		to {
+			transform: translate3d(-50%, 0, 0);
+		}
+	}
+	@keyframes sweep {
+		0%,
+		42% {
+			transform: translateX(-130%);
+		}
+		62%,
+		100% {
+			transform: translateX(130%);
+		}
+	}
+
+	@media (max-width: 900px) {
+		.split,
+		.features,
+		.impact-stats {
+			grid-template-columns: 1fr;
+		}
+		.hero {
+			padding-top: 2rem;
+		}
+		.hero__panel {
+			border-radius: 1rem;
+		}
+		.logo__img {
+			width: 6.2rem;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.reveal,
+		.hero__accent,
+		.landing__orb,
+		.btn--solid::after {
+			animation: none;
+			opacity: 1;
+			transform: none;
+		}
+		.btn,
+		.glass-card {
+			transition: none;
+		}
 	}
 </style>

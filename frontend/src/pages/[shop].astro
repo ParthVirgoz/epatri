@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import BrandMark from "../components/BrandMark.astro";
 export const prerender = false;
 
 const { shop } = Astro.params;
@@ -18,16 +19,60 @@ const apiBaseUrl =
     : 'http://localhost:5000/api/v1');
 
 try {
-  const res = await fetch(`${apiBaseUrl}/shop/${shop}`);
+  // Keep legacy UI/JS as-is; only adapt data source to current public API contract.
+  const res = await fetch(`${apiBaseUrl}/public/${encodeURIComponent(shop || "")}`);
 
   if (!res.ok) {
     throw new Error("Shop not found");
   }
 
-  data = await res.json();
+  const payload = await res.json();
+  const locations = Array.isArray(payload?.locations) ? payload.locations : [];
+  const picked =
+    locations.find((l) => l?.has_menu) || locations[0] || null;
+  const analyticsUsername = String(payload?.analytics_track_username || shop || "").trim();
+  let resolvedShopName = String(payload?.business_name || "").trim();
+
+  // If public payload name falls back to username, resolve human shop name from profile endpoint.
+  if (!resolvedShopName || resolvedShopName.toLowerCase() === analyticsUsername.toLowerCase()) {
+    try {
+      const profileRes = await fetch(`${apiBaseUrl}/shop/${encodeURIComponent(analyticsUsername)}`);
+      if (profileRes.ok) {
+        const profile = await profileRes.json();
+        const profileName = String(profile?.shop_name || "").trim();
+        if (profileName) resolvedShopName = profileName;
+      }
+    } catch {
+      // keep public payload fallback
+    }
+  }
+
+  data = {
+    shop_name: resolvedShopName || shop || "Menu",
+    pdf_url: picked?.pdf_url || null,
+    digital_menu: picked?.digital_menu || { categories: [] },
+    guest_menu_format: picked?.guest_menu_format || "auto",
+    interactive_theme: payload?.interactive_theme ?? null,
+    analytics_track_username: analyticsUsername,
+    business_id: payload?.business_id ?? picked?.business_id ?? null,
+    location_id: picked?.location_id ?? picked?.id ?? null,
+    menu_id: picked?.menu_id ?? null,
+  };
 } catch (err) {
   error = err instanceof Error ? err.message : String(err);
 }
+
+const partnerSignupBase = String(import.meta.env.PUBLIC_PARTNER_SIGNUP_URL || "").replace(/\/$/, "");
+const shopGuestFooterCta =
+  String(import.meta.env.PUBLIC_CREATE_MENU_CTA_URL || "").trim() ||
+  (partnerSignupBase ? `${partnerSignupBase}/register` : new URL("/", Astro.url).href);
+const shopGuestFooterHome = new URL("/", Astro.url).href;
+
+const socialInstagram = String(import.meta.env.PUBLIC_SOCIAL_INSTAGRAM || "").trim();
+const socialX = String(import.meta.env.PUBLIC_SOCIAL_X || "").trim();
+const socialGithub = String(import.meta.env.PUBLIC_SOCIAL_GITHUB || "").trim();
+const socialLinkedin = String(import.meta.env.PUBLIC_SOCIAL_LINKEDIN || "").trim();
+const shopHasSocialRow = Boolean(socialInstagram || socialX || socialGithub || socialLinkedin);
 ---
 
 <!doctype html>
@@ -52,6 +97,13 @@ try {
         --bg-color: #121316;
         --container-bg: #1c1e24;
         --text-color: #ffffff;
+        --theme-bg-color: #121316;
+        --surface-text-color: #ffffff;
+        --brand-name-color: #ffffff;
+        --items-color: #ffffff;
+        --category-text-color: #ff9423;
+        --price-text-color: #ff9423;
+        --card-bg-color: #1c1e24;
         /* ePatri brand — e (green), Patri (saffron) */
         --brand-e: #1e9459;
         --brand-patri: #ff9423;
@@ -60,7 +112,7 @@ try {
       body {
         margin: 0;
         padding: 0;
-        background-color: var(--bg-color);
+        background-color: var(--theme-bg-color);
         color: var(--text-color);
         font-family:
           "Inter",
@@ -78,16 +130,16 @@ try {
         display: flex;
         justify-content: center;
         align-items: flex-start;
-        max-width: 1200px;
+        max-width: 1360px;
         margin: 0 auto;
-        padding: 0 20px;
+        padding: 0 8px;
       }
 
       .sidebar {
         position: sticky;
         top: 40px;
-        width: 250px;
-        padding: 40px 20px 20px 0;
+        width: 200px;
+        padding: 32px 12px 16px 0;
         display: flex;
         flex-direction: column;
         align-items: flex-start;
@@ -101,6 +153,8 @@ try {
         letter-spacing: 1px;
         text-transform: uppercase;
         line-height: 1.1;
+        color: var(--surface-text-color)
+        /* color: var(--brand-name-color); */
       }
 
       .qr-container {
@@ -121,17 +175,20 @@ try {
 
       .qr-container p {
         margin: 0;
-        color: #a0a4b8;
+        color: var(--surface-text-color);
+        opacity: 0.75;
         font-size: 14px;
       }
 
       .menu-container {
         width: 100%;
         max-width: 800px;
-        background-color: var(--container-bg);
+        background-color: var(--card-bg-color);
         min-height: 100vh;
-        padding: 40px 0 60px 0;
+        padding: 24px 0 40px 0;
         box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+      }
+      .menu-container.pdf{
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -141,7 +198,7 @@ try {
 
       .menu-image-wrapper {
         width: 100%;
-        padding: 0 30px;
+        padding: 0 18px;
         box-sizing: border-box;
       }
 
@@ -292,6 +349,60 @@ try {
         display: none !important;
       }
 
+      /* Interactive menu — long text */
+      .menu-title-heading {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        hyphens: auto;
+        -webkit-hyphens: auto;
+      }
+      .menu-cat-heading {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        hyphens: auto;
+        -webkit-hyphens: auto;
+      }
+      .menu-item-name {
+        flex: 1;
+        min-width: 0;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        hyphens: auto;
+        -webkit-hyphens: auto;
+      }
+      .menu-item-desc-wrap {
+        margin: 6px 0 0;
+      }
+      .menu-item-desc {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+      .menu-item-desc.is-clamped {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+      .menu-item-desc-toggle {
+        margin: 4px 0 0;
+        padding: 0;
+        border: 0;
+        background: none;
+        cursor: pointer;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 600;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        color: inherit;
+        opacity: 0.88;
+      }
+
       /* ---------------------------
                     Snap Toggle & Tooltip Styles
                     --------------------------- */
@@ -317,8 +428,8 @@ try {
       }
 
       .snap-btn {
-        background: var(--container-bg);
-        color: var(--text-color);
+        background: #1c1e24;
+        color: #ffffff;
         border: 1px solid rgba(255, 255, 255, 0.1);
         padding: 8px 12px;
         border-radius: 20px;
@@ -453,6 +564,7 @@ try {
         padding-right: 15px;
         line-height: 1.4;
       }
+
     </style>
   </head>
 
@@ -481,13 +593,31 @@ try {
     <script
       define:vars={{
         pdfUrl: data?.pdf_url ?? null,
+        digitalMenu: data?.digital_menu ?? { categories: [] },
+        guestMenuFormat: data?.guest_menu_format ?? "auto",
+        interactiveTheme: data?.interactive_theme ?? null,
         shopName: data?.shop_name ?? "",
         error: error ?? null,
-        shopUsername: shop ?? "",
+        shopUsername: data?.analytics_track_username ?? shop ?? "",
+        analyticsBusinessId: data?.business_id ?? null,
+        analyticsLocationId: data?.location_id ?? null,
+        analyticsMenuId: data?.menu_id ?? null,
         apiBaseUrl: apiBaseUrl,
       }}
     >
-      window.__MENU_DATA__ = { pdfUrl, shopName, error, shopUsername, apiBaseUrl };
+      window.__MENU_DATA__ = {
+        pdfUrl,
+        digitalMenu,
+        guestMenuFormat,
+        interactiveTheme,
+        shopName,
+        error,
+        shopUsername,
+        analyticsBusinessId,
+        analyticsLocationId,
+        analyticsMenuId,
+        apiBaseUrl,
+      };
       console.log('🌐 [Tracker] initial API base URL', apiBaseUrl);
 
       // Inline Analytics Tracker
@@ -598,7 +728,15 @@ try {
             const geoData = await this.getGeolocationData();
             console.log('📍 [Tracker] Geo:', geoData);
 
-            const payload = { ...deviceInfo, ...locData, ...geoData };
+            const payload = {
+              ...deviceInfo,
+              ...locData,
+              ...geoData,
+              business_id: window.__MENU_DATA__?.analyticsBusinessId || null,
+              location_id: window.__MENU_DATA__?.analyticsLocationId || null,
+              menu_id: window.__MENU_DATA__?.analyticsMenuId || null,
+              event_type: "view",
+            };
 
             const endpoint = `${this.apiBaseUrl}/analytics/shop/${shopUsername}/track`;
             console.log('📡 [Tracker] Sending to:', endpoint);
@@ -702,8 +840,44 @@ try {
 
     <script>
       document.addEventListener("DOMContentLoaded", async () => {
-        const { pdfUrl, shopName, error } = window.__MENU_DATA__;
+        const { pdfUrl, digitalMenu, guestMenuFormat, interactiveTheme, shopName, shopUsername, error } = window.__MENU_DATA__;
         const appRoot = document.getElementById("app-root");
+        const categories = Array.isArray(digitalMenu?.categories) ? digitalMenu.categories : [];
+        const hasDigital = categories.length > 0;
+        const mode =
+          guestMenuFormat === "interactive"
+            ? hasDigital
+              ? "interactive"
+              : "none"
+            : guestMenuFormat === "pdf"
+              ? pdfUrl
+                ? "pdf"
+                : "none"
+              : pdfUrl
+                ? "pdf"
+                : hasDigital
+                  ? "interactive"
+                  : "none";
+        const t = interactiveTheme && typeof interactiveTheme === "object" ? interactiveTheme : {};
+        const themeBgColor = String(t.surface || "#121316");
+        const surfaceTextColor = String(t.surfaceTextColor || t.bodyTextColor || "#ffffff");
+        const brandNameColor = String(t.brandNameColor || t.accent || "#ffffff");
+        const itemsColor = String(t.itemsColor || t.bodyTextColor || "#ffffff");
+        const categoryColor = String(t.categoryColor || t.categoryTextColor || "#FF9423");
+        const priceColor = String(t.priceColor || t.priceTextColor || "#FF9423");
+        const cardBgColor = String(t.menuCardColor || t.cardColor || "#1c1e24");
+        const currencySymbol = String(t.currencySymbol || "Rs.");
+        document.documentElement.style.setProperty("--theme-bg-color", themeBgColor);
+        document.documentElement.style.setProperty("--bg-color", themeBgColor);
+        document.documentElement.style.setProperty("--text-color", surfaceTextColor);
+        document.documentElement.style.setProperty("--surface-text-color", surfaceTextColor);
+        document.documentElement.style.setProperty("--brand-name-color", brandNameColor);
+        document.documentElement.style.setProperty("--items-color", itemsColor);
+        document.documentElement.style.setProperty("--category-text-color", categoryColor);
+        document.documentElement.style.setProperty("--price-text-color", priceColor);
+        document.documentElement.style.setProperty("--card-bg-color", cardBgColor);
+
+        const isPdfMode = mode === "pdf";
 
         // Scroll Snap logic
         const snapBtn = document.getElementById("snapToggleBtn");
@@ -711,6 +885,14 @@ try {
         const closeTooltip = document.getElementById("closeTooltip");
 
         const snapFeatureSeen = localStorage.getItem("snapFeatureSeen");
+        if (!isPdfMode) {
+          if (snapBtn) snapBtn.style.display = "none";
+          const fullBtn = document.getElementById("fullHeightToggleBtn");
+          if (fullBtn) fullBtn.style.display = "none";
+          if (snapTooltip) snapTooltip.style.display = "none";
+          document.documentElement.classList.remove("snap-active");
+          document.documentElement.classList.remove("full-height-active");
+        }
 
         if (!snapFeatureSeen) {
           setTimeout(() => {
@@ -745,15 +927,96 @@ try {
         // Check if user is on a mobile-sized screen
         const isMobile = window.matchMedia("(max-width: 900px)").matches;
 
-        // Basic loading skeleton text while processing PDF
+        // Basic loading skeleton text while processing PDF / interactive menu
         appRoot.innerHTML =
           '<div style="display:flex;justify-content:center;align-items:center;height:80vh;color:#a0a4b8;font-size:24px;">Loading Document...</div>';
 
-        if (!pdfUrl) {
+        if (mode === "none") {
           appRoot.innerHTML = `
           <div style="display:flex;justify-content:center;align-items:center;height:80vh;color:#ff4444;font-size:24px;">
               No menu available
           </div>`;
+          return;
+        }
+
+        if (mode === "interactive") {
+          const esc = (v) =>
+            String(v ?? "").replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m] ?? m));
+          const isMobileInteractive = window.matchMedia("(max-width: 900px)").matches;
+          const menuInner = `
+            <h1 class="menu-title-heading" style="margin: 50px 0 30px;color:${esc(brandNameColor)};font-size:28px;font-weight:700;text-align: center;">${esc(shopName)}</h1>
+            ${categories
+              .map((cat) => `
+                <section style="margin-bottom:18px;">
+                  <h2 class="menu-cat-heading" style="margin:0 0 10px;color:${esc(categoryColor)};font-size:20px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;">${esc(cat?.name || "Menu")}</h2>
+                  ${(Array.isArray(cat?.items) ? cat.items : [])
+                    .map((it) => `
+                      <article style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08);">
+                        <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;">
+                          <strong class="menu-item-name" style="color:${esc(itemsColor)};font-weight:600;">${esc(it?.name || "")}</strong>
+                          ${it?.price != null && String(it.price) !== "" ? `<span style="color:${esc(priceColor)};font-weight:900;white-space:nowrap;">${esc(currencySymbol)} ${esc(it.price)}</span>` : ""}
+                        </div>
+                        ${it?.description ? `<div class="menu-item-desc-wrap" style="color:${esc(itemsColor)};opacity:0.72;"><p class="menu-item-desc is-clamped">${esc(it.description)}</p><button type="button" class="menu-item-desc-toggle" hidden aria-expanded="false">More</button></div>` : ""}
+                      </article>
+                    `)
+                    .join("")}
+                </section>
+              `)
+              .join("")}
+          `;
+          const html = isMobileInteractive
+            ? `
+              <div class="menu-container" style="max-width:100%;padding:18px 16px 7rem;">
+                ${menuInner}
+              </div>
+            `
+            : `
+              <div class="layout-wrapper">
+                <div class="sidebar">
+                  <h1 class="brand-name" style="font-size: 32px;">${esc(shopName)}</h1>
+                  <div class="qr-container">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}" alt="QR Code" class="qr-code">
+                    <p>Scan to view on your phone</p>
+                  </div>
+                </div>
+                <div class="menu-container" style="padding:24px 24px 5rem;">
+                  ${menuInner}
+                </div>
+              </div>
+            `;
+          appRoot.innerHTML = html;
+          const wireMenuDescToggles = (root) => {
+            root.querySelectorAll(".menu-item-desc-wrap").forEach((wrap) => {
+              const p = wrap.querySelector(".menu-item-desc");
+              const btn = wrap.querySelector(".menu-item-desc-toggle");
+              if (!p || !btn) return;
+              const refreshClampState = () => {
+                p.classList.add("is-clamped");
+                btn.hidden = true;
+                btn.textContent = "More";
+                btn.setAttribute("aria-expanded", "false");
+                requestAnimationFrame(() => {
+                  requestAnimationFrame(() => {
+                    const overflow = p.scrollHeight > p.clientHeight + 1;
+                    btn.hidden = !overflow;
+                  });
+                });
+              };
+              refreshClampState();
+              btn.addEventListener("click", () => {
+                const open = btn.getAttribute("aria-expanded") === "true";
+                if (open) {
+                  refreshClampState();
+                } else {
+                  p.classList.remove("is-clamped");
+                  btn.setAttribute("aria-expanded", "true");
+                  btn.textContent = "Hide";
+                  btn.hidden = false;
+                }
+              });
+            });
+          };
+          wireMenuDescToggles(appRoot);
           return;
         }
 
@@ -868,17 +1131,16 @@ try {
             });
           } else {
             // Desktop flow
-            const brandName = shopName;
             const desktopHTML = `
                     <div class="layout-wrapper">
                         <div class="sidebar">
-                            <h1 class="brand-name" style="font-size: 32px;">${brandName}</h1>
+                            <h1 class="brand-name" style="font-size: 32px;">${shopName}</h1>
                             <div class="qr-container">
                                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}" alt="QR Code" class="qr-code">
                                 <p>Scan to view on your phone</p>
                             </div>
                         </div>
-                        <div class="menu-container" id="image-list"></div>
+                        <div class="menu-container pdf" id="image-list"></div>
                     </div>
 
                     <!-- Zoom Preview Modal -->
