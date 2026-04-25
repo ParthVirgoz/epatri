@@ -32,7 +32,6 @@ export default function Login() {
     const {
         register,
         handleSubmit,
-        watch,
         formState: { errors, isValid, touchedFields, isSubmitted },
     } = useForm({
         mode: "onChange",
@@ -42,9 +41,6 @@ export default function Login() {
             password: "",
         },
     });
-
-    const emailValue = watch("email");
-    const passwordValue = watch("password");
 
     const onValidSubmit = async (formData) => {
         setLoading(true);

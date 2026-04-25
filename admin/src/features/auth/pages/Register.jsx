@@ -26,7 +26,6 @@ export default function Register() {
     register,
     handleSubmit,
     getValues,
-    watch,
     formState: { errors, isValid, touchedFields, isSubmitted },
   } = useForm({
     mode: "onChange",
@@ -38,11 +37,6 @@ export default function Register() {
       phone_local: "",
     },
   });
-
-  const emailValue = watch("email");
-  const passwordValue = watch("password");
-  const phoneCodeValue = watch("phone_code");
-  const phoneLocalValue = watch("phone_local");
 
   const onValidSubmit = async (formData) => {
     setLoading(true);
