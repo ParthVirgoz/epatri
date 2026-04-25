@@ -202,6 +202,7 @@ export default function AnalyticsDashboard() {
 
     let cancelled = false;
     setStreamState("connecting");
+    let retryTimer = null;
     const connect = async () => {
       try {
         const base = String(apiClient.defaults.baseURL || "").replace(/\/+$/, "");
@@ -269,16 +270,35 @@ export default function AnalyticsDashboard() {
         }
         if (!cancelled) setStreamState("offline");
       } catch {
-        if (!cancelled) setStreamState("offline");
+        if (!cancelled) {
+          setStreamState("offline");
+          retryTimer = setTimeout(() => {
+            if (!cancelled) {
+              setStreamState("connecting");
+              connect();
+            }
+          }, 3000);
+        }
       }
     };
     connect();
 
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
       ctrl.abort();
     };
   }, [user?.shop_username, insightLocationId, viewMode, fetchAnalytics]);
+
+  // Production-safe fallback: keep dashboard fresh even when SSE cannot deliver
+  // across serverless instances. This preserves "near real-time" behavior in live.
+  useEffect(() => {
+    if (!user?.shop_username) return undefined;
+    const id = setInterval(() => {
+      fetchAnalytics({ silent: true });
+    }, 15000);
+    return () => clearInterval(id);
+  }, [user?.shop_username, fetchAnalytics]);
 
   useEffect(() => {
     if (loading || error) return;
