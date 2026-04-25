@@ -72,19 +72,26 @@ app.setErrorHandler((error, request, reply) => {
 });
 
 // register plugins
-await app.register(securityPlugin);
-await app.register(authPlugin);
-await app.register(multipart, {
-  limits: { fileSize: 5 * 1024 * 1024 }
-});
-await app.register(v1Routes, { prefix: '/api/v1' });
+let startupError = null;
+try {
+  await app.register(securityPlugin);
+  await app.register(authPlugin);
+  await app.register(multipart, {
+    limits: { fileSize: 5 * 1024 * 1024 }
+  });
+  await app.register(v1Routes, { prefix: '/api/v1' });
 
-// prepare app (IMPORTANT)
-await app.ready();
+  // prepare app (IMPORTANT)
+  await app.ready();
+} catch (err) {
+  startupError = err;
+  console.error('🔴 Backend startup failed:', err);
+}
 
 const VERCEl_ENV = !!process.env.VERCEL;
 
 if (!VERCEl_ENV) {
+  if (startupError) process.exit(1);
   const port = Number(process.env.PORT || 5000);
   const host = process.env.HOST || '0.0.0.0';
   app.listen({ port, host })
@@ -101,6 +108,17 @@ if (!VERCEl_ENV) {
 // Wait until Node finishes the response — otherwise the serverless invocation can end before CORS
 // (and other) headers are flushed, which browsers report as a CORS failure even when the API returned 200.
 export default async function handler(req, res) {
+  if (startupError) {
+    res.statusCode = 500;
+    res.setHeader('content-type', 'application/json; charset=utf-8');
+    res.end(
+      JSON.stringify({
+        message: 'Backend startup failed',
+        error: startupError?.message || 'Unknown startup error',
+      })
+    );
+    return;
+  }
   await new Promise((resolve, reject) => {
     const done = () => resolve();
     res.once('finish', done);
