@@ -31,6 +31,12 @@ app.addHook('onSend', (request, reply, payload, done) => {
 app.decorate('supabase', supabase);
 app.decorate('supabaseAdmin', supabaseAdmin);
 
+const missingRuntimeEnv = [
+  !process.env.SUPABASE_URL ? 'SUPABASE_URL' : null,
+  !process.env.SUPABASE_ANON_KEY ? 'SUPABASE_ANON_KEY' : null,
+  !process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SUPABASE_SERVICE_ROLE_KEY' : null,
+].filter(Boolean);
+
 // root route
 app.get('/', async () => {
   return { message: 'API is working 🚀' };
@@ -42,6 +48,17 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY || !process.env.
     process.exit(1);
   }
 }
+
+// In production serverless, do not hard-crash imports when env vars are missing.
+// Return a clear 500 payload so deployment issues are diagnosable from API response.
+app.addHook('onRequest', async (request, reply) => {
+  if (missingRuntimeEnv.length === 0) return;
+  if (request.url === '/') return;
+  reply.code(500).send({
+    message: 'Backend environment is not configured',
+    missing: missingRuntimeEnv,
+  });
+});
 
 app.setErrorHandler((error, request, reply) => {
   console.error('🚨 [ERROR]', request.method, request.url, error);
