@@ -37,7 +37,7 @@ export default function MenuStudioMvp() {
   const [shareOpen, setShareOpen] = useState(false);
   const [showPdfLinkField, setShowPdfLinkField] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const [showMobilePreview, setShowMobilePreview] = useState(true);
+  const [showMobilePreview, setShowMobilePreview] = useState(false);
 
   const { url: publicUrl, ok: publicUrlOk } = useMemo(() => getPublicMenuUrl(user), [user]);
 

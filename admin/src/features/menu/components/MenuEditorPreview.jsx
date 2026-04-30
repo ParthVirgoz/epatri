@@ -103,7 +103,7 @@ export default function MenuEditorPreview({
   pdfVersion = 0,
   digitalMenu,
   interactiveTheme,
-  showMobilePreview = true,
+  showMobilePreview = false,
 }) {
   const categories = normalizeDigital(digitalMenu);
   const hasInteractive = categories.some((c) => c.name || c.items.some((i) => i.name || i.description || i.price));
@@ -145,8 +145,8 @@ export default function MenuEditorPreview({
         <div className="min-h-full" style={{ background: surface, fontFamily: fontFamily }}>
           <div className="min-h-full px-4 pb-10 pt-8" style={{ background: menuCardColor, maxWidth: "100%" }}>
             <h1
-              className="text-center text-[28px] font-bold leading-tight [overflow-wrap:anywhere] [word-break:break-word] [hyphens:auto]"
-              style={{ color: brandNameColor, margin: "50px 0 30px" }}
+              className="text-center text-xl font-bold leading-tight [overflow-wrap:anywhere] [word-break:break-word] [hyphens:auto] mb-5"
+              style={{ color: brandNameColor }}
             >
               {businessName || "Your business"}
             </h1>
@@ -156,7 +156,7 @@ export default function MenuEditorPreview({
               </p>
             ) : (
               previewGroups.map((cat, ci) => (
-                <section key={ci} className="mb-[18px]">
+                <section key={ci}>
                   <h2
                     className="mb-2.5 text-[20px] font-bold uppercase tracking-[0.03em] [overflow-wrap:anywhere] [word-break:break-word] [hyphens:auto]"
                     style={{ color: categoryColor }}
@@ -201,7 +201,7 @@ export default function MenuEditorPreview({
   );
 
   return (
-    <div className={`mx-auto flex h-full w-full flex-col items-center justify-center px-2 sm:px-3 ${showMobilePreview ? "max-w-[320px]" : "max-w-[720px]"}`}>
+    <div className={`mx-auto flex h-full w-full flex-col items-center justify-center py-3 px-2 sm:px-3 ${showMobilePreview ? "max-w-[320px]" : "max-w-[720px]"}`}>
 
       {/* <div className="mb-3 flex items-center justify-center gap-2">
         <button type="button" className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#ececec] text-[#535353]" title="QR code">
@@ -219,7 +219,7 @@ export default function MenuEditorPreview({
         <div className="relative w-full overflow-visible py-1">
           <div className="pointer-events-none absolute -inset-4 rounded-[3rem] bg-gradient-to-b from-[#d8e5df]/80 via-transparent to-[#c5d4cc]/40 blur-2xl sm:-inset-6" aria-hidden />
 
-          <div className="relative mx-auto aspect-[1/2] h-[clamp(420px,min(56dvh,calc(100dvh-11rem)),min(600px,calc(100dvh-9rem)))] w-auto max-w-full rounded-[2.65rem] bg-gradient-to-b from-[#3a3a3a] via-[#1f1f1f] to-[#141414] p-[11px] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.06)_inset]">
+          <div className="relative mx-auto aspect-[1/2] h-[clamp(520px,min(56dvh,calc(100dvh-11rem)),min(600px,calc(100dvh-9rem)))] w-auto max-w-full rounded-[2.65rem] bg-gradient-to-b from-[#3a3a3a] via-[#1f1f1f] to-[#141414] p-[11px] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.06)_inset]">
             <div className="absolute -left-[2px] top-[18%] h-8 w-[3px] rounded-l-sm bg-[#2a2a2a] shadow-sm" aria-hidden />
             <div className="absolute -right-[2px] top-[22%] h-14 w-[3px] rounded-r-sm bg-[#2a2a2a] shadow-sm" aria-hidden />
             <div className="absolute -right-[2px] top-[38%] h-14 w-[3px] rounded-r-sm bg-[#2a2a2a] shadow-sm" aria-hidden />
