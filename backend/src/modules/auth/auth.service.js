@@ -448,6 +448,41 @@ export async function updateCurrentUser(fastify, user, payload) {
     if (error) throw new Error(error.message);
   }
 
+  // Guest frontend title uses `businesses.name` (see public.service businessPublicPayload).
+  // Keep it in sync when the owner updates display name on profile.
+  if (payload?.shop_name !== undefined && patch.shop_name) {
+    const displayName = patch.shop_name;
+    const { data: profRow, error: profErr } = await fastify.supabaseAdmin
+      .from("profiles")
+      .select("business_id")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profErr) {
+      fastify.log.warn("[updateCurrentUser] could not load profile for business name sync", profErr.message);
+    } else {
+      let businessId = profRow?.business_id ?? null;
+      if (!businessId) {
+        const { data: owned } = await fastify.supabaseAdmin
+          .from("businesses")
+          .select("id")
+          .eq("owner_user_id", user.id)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        businessId = owned?.id ?? null;
+      }
+      if (businessId) {
+        const { error: bErr } = await fastify.supabaseAdmin
+          .from("businesses")
+          .update({ name: displayName })
+          .eq("id", businessId);
+        if (bErr) {
+          fastify.log.warn("[updateCurrentUser] business name sync failed", bErr.message);
+        }
+      }
+    }
+  }
+
   if (payload?.preferences !== undefined) {
     const { data: authUserData, error: authErr } = await fastify.supabaseAdmin.auth.admin.getUserById(user.id);
     if (authErr) throw new Error(authErr.message);
