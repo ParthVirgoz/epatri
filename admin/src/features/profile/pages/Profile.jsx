@@ -202,7 +202,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-4 px-2 pb-4">
+    <div className="mx-auto w-full max-w-3xl space-y-4 px-2 py-6">
       <section className="rounded-xl border border-[#dbdbdb] bg-white p-4 shadow-sm">
         <div className="mb-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-[#8e8e8e]">Business logo</p>

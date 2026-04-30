@@ -185,7 +185,7 @@ export default function MenuStudioMvp() {
         businessName={user?.business_name || user?.shop_name || user?.business_slug}
       />
 
-      <section className="col-span-2 flex min-h-0 flex-col border border-[#dbdbdb] bg-white p-4 gap-4 shadow-sm">
+      <section className="col-span-2 flex min-h-0 flex-col border border-[#dbdbdb] bg-white px-2 py-4 sm:p-4 gap-4 shadow-sm">
         <div className="space-y-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
             <div className="min-w-0">

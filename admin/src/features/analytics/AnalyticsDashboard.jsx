@@ -332,7 +332,7 @@ export default function AnalyticsDashboard() {
   const growthHint = growth?.period_days === 1 ? "vs yesterday" : `vs prior ${growth?.period_days || 0} days`;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 pb-6">
+    <div className="mx-auto max-w-4xl space-y-4 py-6">
       <div className="rounded-xl border border-[#dbdbdb] bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-lg font-semibold text-[#262626]">Insights</h2>
