@@ -34,7 +34,7 @@ export default function ShareMenuLinkButton() {
         onClose={() => setOpen(false)}
         url={url}
         ready={ok}
-        businessName={user?.shop_name || user?.shop_username}
+        businessName={user?.business_name || user?.shop_name || user?.business_slug}
       />
       <button
         type="button"

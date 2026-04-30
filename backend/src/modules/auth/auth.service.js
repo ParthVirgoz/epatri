@@ -3,26 +3,6 @@ import { listMembershipsForUser } from '../../services/tenantScope.service.js';
 import { signMenuPdfUrlIfStorable } from '../../utils/menuPdfStorage.js';
 import { businessThemeUpsertPayload, normalizeInteractiveTheme } from '../../utils/businessTheme.js';
 
-const SHOP_USERNAME_RE = /^[a-z0-9-]+$/;
-
-function sanitizeShopUsernameSegment(raw) {
-  return String(raw || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 32);
-}
-
-function localPartFromEmail(email) {
-  const e = String(email || '').trim().toLowerCase();
-  const at = e.indexOf('@');
-  if (at < 1) return '';
-  let local = e.slice(0, at);
-  const plus = local.indexOf('+');
-  if (plus >= 0) local = local.slice(0, plus);
-  return local;
-}
 
 function normalizePreferences(raw) {
   const base = {
@@ -50,10 +30,6 @@ function isMissingRelationError(err) {
   return msg.includes("does not exist") || msg.includes("schema cache");
 }
 
-/**
- * After v3 MVP reset, menu content lives in `menu_snapshots`. Falls back to legacy `menus` when the new
- * tables are not present.
- */
 async function loadMenuFieldsForProfile(fastify, userId, profile, primaryBusinessId) {
   let pdf_url = null;
   let digital_menu = {};
@@ -118,101 +94,12 @@ async function loadMenuFieldsForProfile(fastify, userId, profile, primaryBusines
     }
   }
 
-  let menuRes = { data: null, error: null };
-  if (profile.primary_location_id) {
-    menuRes = await fastify.supabaseAdmin
-      .from("menus")
-      .select("id, pdf_url, digital_menu")
-      .eq("location_id", profile.primary_location_id)
-      .eq("is_default", true)
-      .maybeSingle();
-  }
-  if (!menuRes.data) {
-    menuRes = await fastify.supabaseAdmin
-      .from("menus")
-      .select("id, pdf_url, digital_menu")
-      .eq("user_id", userId)
-      .maybeSingle();
-  }
-
-  if (menuRes.error) {
-    if (isMissingRelationError(menuRes.error)) {
-      return { menu_id, pdf_url, digital_menu };
-    }
-    const msg = String(menuRes.error.message || "");
-    if (msg.includes("digital_menu")) {
-      const fallback = await fastify.supabaseAdmin
-        .from("menus")
-        .select("pdf_url")
-        .eq("user_id", userId)
-        .maybeSingle();
-      pdf_url = fallback.data?.pdf_url ?? null;
-      digital_menu = {};
-    } else {
-      fastify.log.warn("[getCurrentUser] menu select failed", menuRes.error);
-    }
-  } else if (menuRes.data) {
-    menu_id = menuRes.data.id ?? null;
-    pdf_url = menuRes.data.pdf_url ?? null;
-    digital_menu = menuRes.data.digital_menu ?? {};
-  }
-
   return { menu_id, pdf_url, digital_menu };
-}
-
-/** Default public username when none sent at signup: email local-part, sanitized to a-z0-9- (min 3). */
-function defaultShopUsernameFromEmail(email, userId) {
-  const baseRaw = sanitizeShopUsernameSegment(localPartFromEmail(email));
-  let base = baseRaw;
-  if (!base || base.length < 3) {
-    const hex = String(userId || '').replace(/-/g, '');
-    base = `u${hex.slice(0, 7)}`;
-  }
-  if (base.length > 32) base = base.slice(0, 32);
-  if (!SHOP_USERNAME_RE.test(base) || base.length < 3) {
-    const hex = String(userId || '').replace(/-/g, '');
-    base = `u${hex.slice(0, 7)}`;
-  }
-  return base;
-}
-
-async function pickUniqueShopUsername(fastify, email, userId) {
-  const base = defaultShopUsernameFromEmail(email, userId);
-  for (let n = 0; n < 200; n += 1) {
-    const suffix = n === 0 ? '' : `-${n}`;
-    const maxBase = 32 - suffix.length;
-    const candidate = (base.slice(0, Math.max(0, maxBase)) + suffix).slice(0, 32);
-    if (!SHOP_USERNAME_RE.test(candidate) || candidate.length < 3) continue;
-
-    const { data: existing } = await fastify.supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .eq('shop_username', candidate)
-      .maybeSingle();
-
-    if (!existing) return candidate;
-  }
-  const hex = String(userId || '').replace(/-/g, '');
-  return `u${hex}`.slice(0, 32);
 }
 
 export async function registerUser(fastify, data) {
   const { email, password } = data;
-  const requestedUsername = String(data.shop_username || '').trim().toLowerCase();
-  const shop_name = String(data.shop_name || '').trim();
   const phone = String(data.phone || '').trim();
-
-  if (requestedUsername) {
-    const { data: existing } = await fastify.supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .eq('shop_username', requestedUsername)
-      .maybeSingle();
-
-    if (existing) {
-      throw new Error('Shop username already taken');
-    }
-  }
 
   const { data: authData, error } = await fastify.supabaseAdmin.auth.admin.createUser({
     email,
@@ -224,19 +111,10 @@ export async function registerUser(fastify, data) {
   if (error) throw new Error(error.message);
 
   const user = authData.user;
-  /** Prefer email from created auth user (source of truth) for local-part username. */
-  const emailForUsername = String(user.email || email || '')
-    .trim()
-    .toLowerCase();
-  const shop_username =
-    requestedUsername || (await pickUniqueShopUsername(fastify, emailForUsername, user.id));
-
   const profileInsert = {
     id: user.id,
     role: 'branch_admin',
-    shop_username,
   };
-  if (shop_name) profileInsert.shop_name = shop_name;
 
   const { data: profileRow } = await fastify.supabaseAdmin
     .from('profiles')
@@ -248,9 +126,7 @@ export async function registerUser(fastify, data) {
     const { error: updErr } = await fastify.supabaseAdmin
       .from('profiles')
       .update({
-        shop_username,
         role: 'branch_admin',
-        ...(shop_name ? { shop_name } : {}),
       })
       .eq('id', user.id);
     if (updErr) throw new Error(updErr.message);
@@ -344,15 +220,19 @@ export async function getCurrentUser(fastify, user) {
     if (signed) pdf_url_out = signed;
   }
 
-  let business_slug = profile.shop_username;
+  let business_slug = null;
+  let business_name = null;
   if (primaryBusinessId) {
     const { data: biz } = await fastify.supabaseAdmin
       .from("businesses")
-      .select("slug")
+      .select("name, slug")
       .eq("id", primaryBusinessId)
       .maybeSingle();
     if (biz?.slug) {
       business_slug = biz.slug;
+    }
+    if (biz?.name) {
+      business_name = biz.name;
     }
   }
 
@@ -408,6 +288,8 @@ export async function getCurrentUser(fastify, user) {
 
   return {
     ...profile,
+    shop_name: business_name || null,
+    business_name: business_name || null,
     pdf_url: pdf_url_out,
     digital_menu,
     menu_id,
@@ -425,9 +307,6 @@ export async function getCurrentUser(fastify, user) {
 
 export async function updateCurrentUser(fastify, user, payload) {
   const patch = {};
-  if (payload?.shop_name !== undefined) {
-    patch.shop_name = String(payload.shop_name || "").trim().slice(0, 120);
-  }
   if (payload?.shop_logo_data_url !== undefined) {
     const raw = payload.shop_logo_data_url;
     if (raw === null) {
@@ -448,10 +327,14 @@ export async function updateCurrentUser(fastify, user, payload) {
     if (error) throw new Error(error.message);
   }
 
-  // Guest frontend title uses `businesses.name` (see public.service businessPublicPayload).
-  // Keep it in sync when the owner updates display name on profile.
-  if (payload?.shop_name !== undefined && patch.shop_name) {
-    const displayName = patch.shop_name;
+  // Canonical branding source is `businesses.name`; profile no longer owns business display name.
+  if (payload?.shop_name !== undefined) {
+    const displayName = String(payload.shop_name || "").trim().slice(0, 120);
+    if (!displayName) {
+      const err = new Error("Business name is required");
+      err.statusCode = 400;
+      throw err;
+    }
     const { data: profRow, error: profErr } = await fastify.supabaseAdmin
       .from("profiles")
       .select("business_id")

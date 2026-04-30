@@ -23,7 +23,7 @@ export default function Profile() {
   const [savingName, setSavingName] = useState(false);
   const [savingTheme, setSavingTheme] = useState(false);
   const [savingLogo, setSavingLogo] = useState(false);
-  const [shopName, setShopName] = useState(user?.shop_name || "");
+  const [shopName, setShopName] = useState(user?.business_name || user?.shop_name || "");
   const [avatarDataUrl, setAvatarDataUrl] = useState(
     () => user?.shop_logo_data_url || getProfileAvatar() || "",
   );
@@ -48,14 +48,14 @@ export default function Profile() {
     navigate("/welcome", { replace: true });
   };
 
-  const name = user?.shop_name || user?.email || "Your place";
-  const handle = user?.shop_username ? `@${user.shop_username}` : user?.email || "";
+  const name = user?.business_name || user?.shop_name || user?.email || "Your place";
+  const handle = user?.business_slug ? `@${user.business_slug}` : user?.email || "";
   const avatarLabel = useMemo(() => (shopName || name || "?").charAt(0).toUpperCase(), [shopName, name]);
 
   const { url: publicUrl, ok: menuOk, reason } = getPublicMenuUrl(user);
   const menuUrl = menuOk
     ? publicUrl
-    : user?.shop_username && reason === "no_base"
+    : user?.business_slug && reason === "no_base"
       ? "Set VITE_PUBLIC_MENU_BASE_URL in admin/.env (e.g. http://localhost:4321)"
       : "";
 

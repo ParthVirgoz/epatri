@@ -182,7 +182,7 @@ export default function MenuStudioMvp() {
         onClose={() => setShareOpen(false)}
         url={publicUrl}
         ready={publicUrlOk}
-        businessName={user?.shop_name || user?.shop_username}
+        businessName={user?.business_name || user?.shop_name || user?.business_slug}
       />
 
       <section className="col-span-2 flex min-h-0 flex-col border border-[#dbdbdb] bg-white p-4 gap-4 shadow-sm">
@@ -327,7 +327,7 @@ export default function MenuStudioMvp() {
             digitalMenu={mode === "interactive" ? digitalObj : {}}
             menuStatus={s?.draft_pending ? "draft" : "published"}
             interactiveTheme={uiSettings.interactiveTheme}
-            businessName={user?.shop_name || user?.shop_username || "Menu"}
+            businessName={user?.business_name || user?.shop_name || user?.business_slug || "Menu"}
             showMobilePreview={showMobilePreview}
           />
         </div>

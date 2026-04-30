@@ -133,7 +133,7 @@ export default function AnalyticsDashboard() {
 
   const fetchAnalytics = useCallback(
     async ({ silent = false } = {}) => {
-      if (!user?.shop_username) {
+      if (!user?.business_slug) {
         if (!silent) setLoading(false);
         setError("Open your profile after sign-in, or sign in again.");
         return;
@@ -152,12 +152,12 @@ export default function AnalyticsDashboard() {
         const tzQ = `&tz_offset_min=${new Date().getTimezoneOffset()}`;
         if (viewMode === "summary") {
           const res = await apiClient.get(
-            `/analytics/shop/${user.shop_username}/summary?start_date=${dateRange.start}&end_date=${dateRange.end}${tzQ}${locQ}`,
+            `/analytics/shop/${user.business_slug}/summary?start_date=${dateRange.start}&end_date=${dateRange.end}${tzQ}${locQ}`,
           );
           setAnalytics(res.data.data);
         } else {
           const res = await apiClient.get(
-            `/analytics/shop/${user.shop_username}/details?limit=50&offset=0${locQ}`,
+            `/analytics/shop/${user.business_slug}/details?limit=50&offset=0${locQ}`,
           );
           setAnalytics(res.data.data);
         }
@@ -173,7 +173,7 @@ export default function AnalyticsDashboard() {
         }
       }
     },
-    [user?.shop_username, viewMode, dateRange.start, dateRange.end, insightLocationId, accessibleLocations.length],
+    [user?.business_slug, viewMode, dateRange.start, dateRange.end, insightLocationId, accessibleLocations.length],
   );
 
   useEffect(() => {
@@ -192,7 +192,7 @@ export default function AnalyticsDashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
-    if (!token || !user?.shop_username) {
+    if (!token || !user?.business_slug) {
       setStreamState("offline");
       return undefined;
     }
@@ -206,7 +206,7 @@ export default function AnalyticsDashboard() {
     const connect = async () => {
       try {
         const base = String(apiClient.defaults.baseURL || "").replace(/\/+$/, "");
-        const url = `${base}/analytics/shop/${encodeURIComponent(user.shop_username)}/stream`;
+        const url = `${base}/analytics/shop/${encodeURIComponent(user.business_slug)}/stream`;
         const res = await fetch(url, {
           method: "GET",
           headers: { Authorization: `Bearer ${token}` },
@@ -288,25 +288,25 @@ export default function AnalyticsDashboard() {
       if (retryTimer) clearTimeout(retryTimer);
       ctrl.abort();
     };
-  }, [user?.shop_username, insightLocationId, viewMode, fetchAnalytics]);
+  }, [user?.business_slug, insightLocationId, viewMode, fetchAnalytics]);
 
   // Production-safe fallback: keep dashboard fresh even when SSE cannot deliver
   // across serverless instances. This preserves "near real-time" behavior in live.
   useEffect(() => {
-    if (!user?.shop_username) return undefined;
+    if (!user?.business_slug) return undefined;
     const id = setInterval(() => {
       fetchAnalytics({ silent: true });
     }, 15000);
     return () => clearInterval(id);
-  }, [user?.shop_username, fetchAnalytics]);
+  }, [user?.business_slug, fetchAnalytics]);
 
   useEffect(() => {
     if (loading || error) return;
-    if (!user?.shop_username || viewMode !== "summary") return;
+    if (!user?.business_slug || viewMode !== "summary") return;
     if (!analytics || Array.isArray(analytics)) return;
     const total = Number(analytics.total_views || 0);
     const eligible = eligibleMilestoneTotal(total);
-    const key = getMilestoneStorageKey(user.shop_username, insightLocationId, activePreset, dateRange);
+    const key = getMilestoneStorageKey(user.business_slug, insightLocationId, activePreset, dateRange);
     const celebrated = readCelebratedMaxMilestone(key);
     if (eligible > celebrated) {
       writeCelebratedMaxMilestone(key, eligible);
@@ -315,7 +315,7 @@ export default function AnalyticsDashboard() {
         description: "Live milestone reached in this selected date range.",
       });
     }
-  }, [loading, error, analytics, user?.shop_username, viewMode, insightLocationId, activePreset, dateRange]);
+  }, [loading, error, analytics, user?.business_slug, viewMode, insightLocationId, activePreset, dateRange]);
 
   if (loading && !analytics) {
     return <div className="flex min-h-[40vh] items-center justify-center text-sm text-[#8e8e8e]">Loading…</div>;

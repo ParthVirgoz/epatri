@@ -5,31 +5,35 @@ import { publishAnalyticsEvent, subscribeAnalyticsShop } from './analytics.realt
 import { isOriginAllowed } from '../../config/corsAllowlist.js';
 import { bumpTreeImpactCounters } from '../public/public.service.js';
 
-/** Only the profile owner for this `shop_username` may read analytics. */
-async function assertShopOwner(req, shopUsername) {
-  const { data: profile, error } = await req.server.supabaseAdmin
-    .from('profiles')
-    .select('shop_username')
-    .eq('id', req.user.id)
-    .single();
+async function getBusinessBySlug(req, shopUsername) {
+  const { data: business, error } = await req.server.supabaseAdmin
+    .from('businesses')
+    .select('id, owner_user_id, slug')
+    .eq('slug', shopUsername)
+    .maybeSingle();
+  if (error || !business) {
+    const err = new Error('Shop not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  return business;
+}
 
-  if (error || !profile || profile.shop_username !== shopUsername) {
+/** Only business owner for this slug may read analytics. */
+async function assertShopOwner(req, shopUsername) {
+  const business = await getBusinessBySlug(req, shopUsername);
+  if (business.owner_user_id !== req.user.id) {
     const err = new Error('Forbidden');
     err.statusCode = 403;
     throw err;
   }
+  return business;
 }
 
 /** When filtering by `location_id`, ensure it belongs to the user's business (post–V2 migration). */
 async function assertCanReadAnalyticsForLocation(req, shopUsername, locationId) {
-  await assertShopOwner(req, shopUsername);
+  const business = await assertShopOwner(req, shopUsername);
   if (!locationId) return;
-  const { data: prof } = await req.server.supabaseAdmin
-    .from('profiles')
-    .select('business_id')
-    .eq('id', req.user.id)
-    .maybeSingle();
-  if (!prof?.business_id) return;
 
   const { data: loc } = await req.server.supabaseAdmin
     .from('locations')
@@ -42,7 +46,7 @@ async function assertCanReadAnalyticsForLocation(req, shopUsername, locationId) 
     err.statusCode = 404;
     throw err;
   }
-  if (loc.business_id !== prof.business_id) {
+  if (loc.business_id !== business.id) {
     const err = new Error('Forbidden');
     err.statusCode = 403;
     throw err;
@@ -64,23 +68,13 @@ export async function trackMenuViewController(req, reply) {
     const deviceInfo = parseUserAgent(userAgent);
     console.log('📊 [Analytics] Device Info:', deviceInfo);
 
-    // Get shop info
-    const { data: shopData, error: shopError } = await req.server.supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .eq('shop_username', shop_username)
-      .single();
+    const business = await getBusinessBySlug(req, shop_username);
 
-    if (shopError || !shopData) {
-      console.error('❌ [Analytics] Shop not found:', shop_username, shopError);
-      return reply.code(404).send({ message: 'Shop not found', username: shop_username });
-    }
-
-    console.log('✅ [Analytics] Shop found:', shopData.id);
+    console.log('✅ [Analytics] Shop found:', business.id);
 
     // Prepare analytics data
     const analyticsData = {
-      shop_id: shopData.id,
+      shop_id: business.owner_user_id,
       shop_username,
       device_type: deviceInfo.device_type,
       browser: deviceInfo.browser,
@@ -95,7 +89,7 @@ export async function trackMenuViewController(req, reply) {
       region: req.body?.region || null,
       latitude: req.body?.latitude || null,
       longitude: req.body?.longitude || null,
-      business_id: req.body?.business_id || null,
+      business_id: req.body?.business_id || business.id,
       location_id: req.body?.location_id || null,
       menu_id: req.body?.menu_id || null,
       event_type: req.body?.event_type || 'view',
@@ -184,22 +178,13 @@ export async function getAnalyticsSummaryController(req, reply) {
     const { start_date, end_date, location_id, tz_offset_min } = req.query;
     const tzOffsetMin = Number.isFinite(Number(tz_offset_min)) ? Number(tz_offset_min) : 0;
 
-    // Get shop info
-    const { data: shopData, error: shopError } = await req.server.supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .eq('shop_username', shop_username)
-      .single();
-
-    if (shopError || !shopData) {
-      return reply.code(404).send({ message: 'Shop not found' });
-    }
+    const business = await getBusinessBySlug(req, shop_username);
 
     await assertCanReadAnalyticsForLocation(req, shop_username, location_id);
 
     const analyticsService = new AnalyticsService(req.server.supabaseAdmin);
     const result = await analyticsService.getAnalyticsSummary(
-      shopData.id,
+      business.owner_user_id,
       start_date,
       end_date,
       location_id,
@@ -222,22 +207,13 @@ export async function getAnalyticsDetailController(req, reply) {
     // Validate query
     const validatedQuery = analyticsQuerySchema.parse({ limit, offset, location_id });
 
-    // Get shop info
-    const { data: shopData, error: shopError } = await req.server.supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .eq('shop_username', shop_username)
-      .single();
-
-    if (shopError || !shopData) {
-      return reply.code(404).send({ message: 'Shop not found' });
-    }
+    const business = await getBusinessBySlug(req, shop_username);
 
     await assertCanReadAnalyticsForLocation(req, shop_username, validatedQuery.location_id);
 
     const analyticsService = new AnalyticsService(req.server.supabaseAdmin);
     const result = await analyticsService.getAnalyticsDetail(
-      shopData.id,
+      business.owner_user_id,
       validatedQuery.limit,
       validatedQuery.offset,
       validatedQuery.location_id

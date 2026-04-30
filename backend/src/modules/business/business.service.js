@@ -592,8 +592,6 @@ export async function setupOnboardingForMyBusiness(fastify, userId, payload) {
   const { error: profileErr } = await fastify.supabaseAdmin
     .from('profiles')
     .update({
-      shop_name: businessName,
-      shop_username: businessSlug,
       business_id: business.id,
       primary_location_id: location.id,
     })

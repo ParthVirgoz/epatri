@@ -277,17 +277,7 @@ export async function uploadPdfDraftMvp(fastify, req) {
   const draftTitle =
     existingPublished?.title && String(existingPublished.title).trim() ? existingPublished.title : "Menu";
 
-  const { data: profile, error: profErr } = await db
-    .from("profiles")
-    .select("shop_username")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (profErr) throw new Error(profErr.message);
-  if (!profile?.shop_username) {
-    throw clientError("Profile is missing a public shop username. Finish signup or contact support.", 400);
-  }
-
-  const filePath = `${profile.shop_username}/mvp-${location.id}.pdf`;
+  const filePath = `${business.slug}/mvp-${location.id}.pdf`;
   const { error: uploadError } = await db.storage.from("menus").upload(filePath, fileBuffer, {
     contentType: "application/pdf",
     upsert: true,

@@ -69,18 +69,25 @@ export async function uploadMenuService(fastify, req) {
 
   const { data: profile, error: profErr } = await fastify.supabaseAdmin
     .from("profiles")
-    .select("shop_username, primary_location_id")
+    .select("business_id, primary_location_id")
     .eq("id", user.id)
     .maybeSingle();
 
   if (profErr) throw new Error(profErr.message);
-  if (!profile?.shop_username) {
-    throw new Error("Profile is missing a public shop username. Finish signup or contact support.");
-  }
+  const { data: ownedBusiness, error: bErr } = await fastify.supabaseAdmin
+    .from("businesses")
+    .select("slug")
+    .eq("owner_user_id", user.id)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (bErr) throw new Error(bErr.message);
+  const businessSlug = ownedBusiness?.slug;
+  if (!businessSlug) throw new Error("Business slug is missing. Complete onboarding first.");
 
   const filePath = menuIdOpt
-    ? `${profile.shop_username}/menu-${menuIdOpt}.pdf`
-    : `${profile.shop_username}/menu.pdf`;
+    ? `${businessSlug}/menu-${menuIdOpt}.pdf`
+    : `${businessSlug}/menu.pdf`;
 
   const { error: uploadError } = await fastify.supabaseAdmin.storage
     .from("menus")

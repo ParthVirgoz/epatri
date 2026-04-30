@@ -8,8 +8,8 @@ const { shop } = Astro.params;
 // Debug: log what shop was accessed
 console.log('🖥️ [Server] Page accessed for shop:', shop);
 
-let data = null;
-let error = null;
+let data = null as any;
+let error = null as string | null;
 
 // Prefer explicit env variable (Astro/Vite) first.
 const apiBaseUrl =
@@ -31,21 +31,7 @@ try {
   const picked =
     locations.find((l) => l?.has_menu) || locations[0] || null;
   const analyticsUsername = String(payload?.analytics_track_username || shop || "").trim();
-  let resolvedShopName = String(payload?.business_name || "").trim();
-
-  // If public payload name falls back to username, resolve human shop name from profile endpoint.
-  if (!resolvedShopName || resolvedShopName.toLowerCase() === analyticsUsername.toLowerCase()) {
-    try {
-      const profileRes = await fetch(`${apiBaseUrl}/shop/${encodeURIComponent(analyticsUsername)}`);
-      if (profileRes.ok) {
-        const profile = await profileRes.json();
-        const profileName = String(profile?.shop_name || "").trim();
-        if (profileName) resolvedShopName = profileName;
-      }
-    } catch {
-      // keep public payload fallback
-    }
-  }
+  const resolvedShopName = String(payload?.business_name || "").trim();
 
   data = {
     shop_name: resolvedShopName || shop || "Menu",
@@ -973,7 +959,6 @@ const shopHasSocialRow = Boolean(socialInstagram || socialX || socialGithub || s
             : `
               <div class="layout-wrapper">
                 <div class="sidebar">
-                  <h1 class="brand-name" style="font-size: 32px;">${esc(shopName)}</h1>
                   <div class="qr-container">
                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}" alt="QR Code" class="qr-code">
                     <p>Scan to view on your phone</p>
@@ -1134,7 +1119,6 @@ const shopHasSocialRow = Boolean(socialInstagram || socialX || socialGithub || s
             const desktopHTML = `
                     <div class="layout-wrapper">
                         <div class="sidebar">
-                            <h1 class="brand-name" style="font-size: 32px;">${shopName}</h1>
                             <div class="qr-container">
                                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}" alt="QR Code" class="qr-code">
                                 <p>Scan to view on your phone</p>

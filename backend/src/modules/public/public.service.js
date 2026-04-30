@@ -1,4 +1,3 @@
-import { resolveActiveMenuForLocation } from "../../services/menuSchedule.service.js";
 import { mapBusinessThemeRow } from "../../utils/mapBusinessTheme.js";
 import { signMenuPdfUrlIfStorable } from "../../utils/menuPdfStorage.js";
 
@@ -27,76 +26,6 @@ function hasDigitalContent(dm) {
   if (Array.isArray(cats) && cats.length > 0) return true;
   const keys = Object.keys(dm).filter((k) => k !== "categories");
   return keys.length > 0;
-}
-
-async function legacyPublicPayload(fastify, db, normalized) {
-  const { data: profile, error: pErr } = await db
-    .from("profiles")
-    .select("id, shop_name, shop_username")
-    .eq("shop_username", normalized)
-    .maybeSingle();
-
-  if (pErr) throw pErr;
-  if (!profile) {
-    const err = new Error("Business not found");
-    err.statusCode = 404;
-    throw err;
-  }
-
-  let pdf_url = null;
-  let digital_menu = {};
-  let menu = null;
-  const { data: menuRow, error: mErr } = await db
-    .from("menus")
-    .select("id, pdf_url, digital_menu")
-    .eq("user_id", profile.id)
-    .eq("status", "published")
-    .maybeSingle();
-  if (!mErr && menuRow) {
-    menu = menuRow;
-    pdf_url = menuRow.pdf_url || null;
-    digital_menu = menuRow.digital_menu ?? {};
-  } else if (mErr && !isMissingRelationError(mErr)) {
-    throw mErr;
-  }
-
-  const has_menu = Boolean(pdf_url) || hasDigitalContent(digital_menu);
-
-  let pdf_url_guest = pdf_url;
-  if (pdf_url_guest) {
-    const signed = await signMenuPdfUrlIfStorable(fastify, pdf_url_guest);
-    if (signed) pdf_url_guest = signed;
-  }
-
-  return {
-    legacy: true,
-    interactive_theme: null,
-    business_id: null,
-    analytics_track_username: profile.shop_username,
-    business_slug: profile.shop_username,
-    business_name: profile.shop_name || profile.shop_username,
-    is_multi_outlet: false,
-    show_location_picker: false,
-    locations: [
-      {
-        id: null,
-        name: profile.shop_name || "Menu",
-        slug: "main",
-        area_label: null,
-        latitude: null,
-        longitude: null,
-        address_text: null,
-        is_primary: true,
-        business_id: null,
-        location_id: null,
-        menu_id: menu?.id ?? null,
-        pdf_url: pdf_url_guest,
-        digital_menu,
-        has_menu,
-        guest_menu_format: "auto",
-      },
-    ],
-  };
 }
 
 async function businessPublicPayload(fastify, db, business) {
@@ -154,40 +83,6 @@ async function businessPublicPayload(fastify, db, business) {
       // Keep legacy fallback below for pre-MVP schema.
     }
 
-    if (!menu_id) {
-      try {
-        const resolved = await resolveActiveMenuForLocation(db, loc.id);
-        if (resolved.menu && resolved.menu.status === "published") {
-          const raw = resolved.menu.pdf_url;
-          pdf_url = raw != null && String(raw).trim() !== "" ? String(raw).trim() : null;
-          digital_menu = resolved.menu.digital_menu ?? {};
-          menu_id = resolved.menu.id;
-          const da = resolved.menu?.display_as;
-          publishedType = da === "pdf" || da === "interactive" ? da : "auto";
-        }
-      } catch (e) {
-        if (!isMissingRelationError(e)) throw e;
-      }
-    }
-
-    if (!pdf_url && !hasDigitalContent(digital_menu) && loc.is_primary) {
-      const { data: menuLegacy, error: legErr } = await db
-        .from("menus")
-        .select("id, pdf_url, digital_menu")
-        .eq("user_id", business.owner_user_id)
-        .eq("status", "published")
-        .maybeSingle();
-      if (!legErr && menuLegacy) {
-        pdf_url = menuLegacy.pdf_url || null;
-        menu_id = menuLegacy.id ?? menu_id;
-        if (!digital_menu || Object.keys(digital_menu).length === 0) {
-          digital_menu = menuLegacy.digital_menu ?? {};
-        }
-      } else if (legErr && !isMissingRelationError(legErr)) {
-        throw legErr;
-      }
-    }
-
     let pdf_url_for_guest = pdf_url;
     if (pdf_url_for_guest && publishedType === "pdf") {
       const signed = await signMenuPdfUrlIfStorable(fastify, pdf_url_for_guest);
@@ -223,13 +118,7 @@ async function businessPublicPayload(fastify, db, business) {
   // Single-outlet brands (is_multi_outlet false) always open the menu on /{slug} even if legacy rows exist.
   const show_location_picker = false;
 
-  const { data: ownerProf } = await db
-    .from("profiles")
-    .select("shop_username")
-    .eq("id", business.owner_user_id)
-    .maybeSingle();
-
-  const analytics_track_username = ownerProf?.shop_username || business.slug;
+  const analytics_track_username = business.slug;
 
   let interactive_theme = null;
   try {
@@ -268,29 +157,18 @@ export async function getPublicBusinessBySlug(fastify, slug) {
     throw err;
   }
 
-  try {
-    const { data: business, error: bErr } = await db
-      .from("businesses")
-      .select("id, name, slug, is_multi_outlet, owner_user_id")
-      .eq("slug", normalized)
-      .maybeSingle();
-
-    if (bErr && isMissingRelationError(bErr)) {
-      return legacyPublicPayload(fastify, db, normalized);
-    }
-    if (bErr) throw bErr;
-
-    if (business) {
-      return await businessPublicPayload(fastify, db, business);
-    }
-  } catch (e) {
-    if (isMissingRelationError(e)) {
-      return legacyPublicPayload(fastify, db, normalized);
-    }
-    throw e;
+  const { data: business, error: bErr } = await db
+    .from("businesses")
+    .select("id, name, slug, is_multi_outlet, owner_user_id")
+    .eq("slug", normalized)
+    .maybeSingle();
+  if (bErr) throw bErr;
+  if (!business) {
+    const err = new Error("Business not found");
+    err.statusCode = 404;
+    throw err;
   }
-
-  return legacyPublicPayload(fastify, db, normalized);
+  return await businessPublicPayload(fastify, db, business);
 }
 
 /**

@@ -31,9 +31,9 @@ export default function Onboarding() {
   const refreshUser = useAuthStore((s) => s.refreshUser);
 
   const [step, setStep] = useState(0);
-  const [businessName, setBusinessName] = useState(user?.shop_name || "");
+  const [businessName, setBusinessName] = useState(user?.business_name || user?.shop_name || "");
   const [businessSlug, setBusinessSlug] = useState(
-    () => (user?.shop_username ? String(user.shop_username).toLowerCase() : "")
+    () => (user?.business_slug ? String(user.business_slug).toLowerCase() : "")
   );
   const [singleArea, setSingleArea] = useState("");
   const [singleGeo, setSingleGeo] = useState(null);
