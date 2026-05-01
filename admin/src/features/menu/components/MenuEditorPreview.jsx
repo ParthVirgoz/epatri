@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import PdfCanvasPreview from "../../../components/PdfCanvasPreview";
-import { INTERACTIVE_THEME_DEFAULTS } from "../menuUiSettings";
+import { INTERACTIVE_MENU_PANEL_BG, INTERACTIVE_THEME_DEFAULTS } from "../menuUiSettings";
 
 const descClampStyle = {
   display: "-webkit-box",
@@ -75,18 +75,107 @@ function normalizeDigital(dm) {
   }));
 }
 
-function StatusBar() {
+function StatusIcons({ className = "text-[#0a0a0a]" }) {
   return (
-    <div className="flex h-8 shrink-0 items-center justify-between bg-white px-4 pt-1 text-[11px] font-semibold tracking-tight text-[#0a0a0a]">
-      <span>9:41</span>
-      <div className="flex items-center gap-1" aria-hidden>
-        <svg className="h-2.5 w-3 text-[#0a0a0a]" viewBox="0 0 12 10" fill="currentColor" aria-hidden>
-          <path d="M1 7h2v2H1V7zm3-2h2v4H4V5zm3-2h2v6H7V3zm3-2h2v8h-2V1z" />
-        </svg>
-        <svg className="h-2.5 w-4 text-[#0a0a0a]" viewBox="0 0 16 10" fill="currentColor" aria-hidden>
-          <path d="M2 3h12v5H2V3zm13 2.5a2.5 2.5 0 01-2.5 2.5h-9A2.5 2.5 0 012 5.5 2.5 2.5 0 014.5 3h7A2.5 2.5 0 0114 5.5z" opacity=".35" />
-          <path d="M2 3h12v5H2z" />
-        </svg>
+    <div className={`flex items-center gap-1 ${className}`} aria-hidden>
+      <svg className="h-2.5 w-3" viewBox="0 0 12 10" fill="currentColor">
+        <path d="M1 7h2v2H1V7zm3-2h2v4H4V5zm3-2h2v6H7V3zm3-2h2v8h-2V1z" />
+      </svg>
+      <svg className="h-2.5 w-4" viewBox="0 0 16 10" fill="currentColor">
+        <path d="M2 3h12v5H2V3zm13 2.5a2.5 2.5 0 01-2.5 2.5h-9A2.5 2.5 0 012 5.5 2.5 2.5 0 014.5 3h7A2.5 2.5 0 0114 5.5z" opacity=".35" />
+        <path d="M2 3h12v5H2z" />
+      </svg>
+    </div>
+  );
+}
+
+/** Decorative shells only — not affiliated with device manufacturers. */
+function MobileDeviceFrame({ variant, children }) {
+  const isPixel = variant === "pixel";
+  const heightClass =
+    "h-[clamp(520px,min(56dvh,calc(100dvh-11rem)),min(620px,calc(100dvh-9rem)))]";
+
+  if (isPixel) {
+    return (
+      <div
+        className="relative w-full overflow-visible py-1"
+        role="img"
+        aria-label="Pixel-style preview (decorative frame)"
+      >
+        <div
+          className="pointer-events-none absolute -inset-4 rounded-[2rem] bg-gradient-to-b from-sky-200/35 via-transparent to-slate-300/40 blur-2xl sm:-inset-6"
+          aria-hidden
+        />
+
+        <div
+          className={`relative mx-auto w-auto max-w-full ${heightClass} rounded-[1.95rem] border border-black/30 bg-gradient-to-b from-[#4a5563] via-[#343d48] to-[#1e252e] p-[10px] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]`}
+          style={{ aspectRatio: "9 / 20" }}
+        >
+          <div className="absolute -left-[2px] top-[19%] h-12 w-[3px] rounded-l-sm bg-[#2f3640]" aria-hidden />
+          <div className="absolute -left-[2px] top-[30%] h-12 w-[3px] rounded-l-sm bg-[#2f3640]" aria-hidden />
+          <div className="absolute -right-[2px] top-[24%] h-[72px] w-[3px] rounded-r-sm bg-[#2f3640]" aria-hidden />
+
+          <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[1.38rem] bg-[#0b0d11] ring-1 ring-white/[0.07]">
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-10 bg-gradient-to-b from-[#0b0d11] via-[#0b0d11]/95 to-transparent pt-1 backdrop-blur-[2px]">
+              <div className="relative flex h-9 items-center justify-between px-4 text-[11px] font-semibold text-white/95">
+                <span>9:41</span>
+                <div className="absolute left-1/2 top-2 -translate-x-1/2">
+                  <div
+                    className="h-[11px] w-[11px] rounded-full bg-[#050608] ring-[2px] ring-[#1a1f28]"
+                    aria-hidden
+                  />
+                </div>
+                <StatusIcons className="text-white/90" />
+              </div>
+            </div>
+            {children}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center bg-gradient-to-t from-[#0b0d11] via-[#0b0d11]/88 to-transparent pb-2.5 pt-8">
+              <div className="h-[5px] w-[152px] rounded-full bg-white/38" aria-hidden />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="relative w-full overflow-visible py-1"
+      role="img"
+      aria-label="Phone-style preview with dynamic island (decorative frame)"
+    >
+      <div
+        className="pointer-events-none absolute -inset-4 rounded-[3rem] bg-gradient-to-b from-[#d0ddd6]/85 via-transparent to-[#b8c9be]/45 blur-2xl sm:-inset-6"
+        aria-hidden
+      />
+
+      <div
+        className={`relative mx-auto w-auto max-w-full ${heightClass} rounded-[2.65rem] bg-gradient-to-b from-[#6b6b6b] via-[#3d3d3d] to-[#1a1a1a] p-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-1px_0_rgba(0,0,0,0.35)]`}
+        style={{ aspectRatio: "10 / 19.5" }}
+      >
+        <div className="absolute -left-[2px] top-[14%] h-6 w-[3px] rounded-l-sm bg-[#2e2e2e]" aria-hidden />
+        <div className="absolute -left-[2px] top-[22%] h-11 w-[3px] rounded-l-sm bg-[#2e2e2e]" aria-hidden />
+        <div className="absolute -left-[2px] top-[31%] h-11 w-[3px] rounded-l-sm bg-[#2e2e2e]" aria-hidden />
+        <div className="absolute -right-[2px] top-[20%] h-[72px] w-[3px] rounded-r-sm bg-[#2e2e2e]" aria-hidden />
+        <div className="absolute -right-[2px] top-[38%] h-14 w-[3px] rounded-r-sm bg-[#2e2e2e]" aria-hidden />
+
+        <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[2.08rem] bg-black ring-1 ring-white/[0.09]">
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 shrink-0 bg-gradient-to-b from-white/55 to-white/25 backdrop-blur-[6px]">
+            <div className="flex justify-center py-1.5">
+              <div
+                className="flex h-[29px] w-[118px] items-center justify-center gap-2 rounded-[14px] bg-black shadow-[0_2px_12px_rgba(0,0,0,0.45)] ring-1 ring-white/12"
+                aria-hidden
+              >
+                <div className="h-2 w-2 rounded-full bg-[#0d0d0d] ring-1 ring-white/5" />
+                <div className="h-1.5 w-6 rounded-full bg-[#1c1c1c]/90" />
+              </div>
+            </div>
+          </div>
+          {children}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex shrink-0 justify-center bg-gradient-to-t from-white/45 via-white/25 to-transparent pb-2 pt-6 backdrop-blur-[4px]">
+            <div className="h-[5px] w-[112px] rounded-full bg-[#0a0a0a]/22" aria-hidden />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -104,6 +193,7 @@ export default function MenuEditorPreview({
   digitalMenu,
   interactiveTheme,
   showMobilePreview = false,
+  previewDevice = "iphone",
 }) {
   const categories = normalizeDigital(digitalMenu);
   const hasInteractive = categories.some((c) => c.name || c.items.some((i) => i.name || i.description || i.price));
@@ -114,7 +204,6 @@ export default function MenuEditorPreview({
   const t = interactiveTheme && typeof interactiveTheme === "object" ? interactiveTheme : {};
   const d = INTERACTIVE_THEME_DEFAULTS;
   const surface = String(t.surface || d.surface);
-  const menuCardColor = String(t.menuCardColor || t.cardColor || d.menuCardColor);
   const brandNameColor = String(t.brandNameColor || t.accent || d.brandNameColor);
   const itemsColor = String(t.itemsColor || t.bodyTextColor || d.itemsColor);
   const categoryColor = String(t.categoryColor || t.categoryTextColor || d.categoryColor);
@@ -143,7 +232,8 @@ export default function MenuEditorPreview({
         </div>
       ) : showInteractive ? (
         <div className="min-h-full" style={{ background: surface, fontFamily: fontFamily }}>
-          <div className="min-h-full px-4 pb-10 pt-8" style={{ background: menuCardColor, maxWidth: "100%" }}>
+          <div className="min-h-full px-4 pb-10 pt-8" style={{ background: INTERACTIVE_MENU_PANEL_BG, maxWidth: "100%" }}>
+            {showMobilePreview ? (<div className="h-9"></div>) : null}
             <h1
               className="text-center text-xl font-bold leading-tight [overflow-wrap:anywhere] [word-break:break-word] [hyphens:auto] mb-5"
               style={{ color: brandNameColor }}
@@ -156,9 +246,9 @@ export default function MenuEditorPreview({
               </p>
             ) : (
               previewGroups.map((cat, ci) => (
-                <section key={ci}>
+                <section key={ci} className="mb-9">
                   <h2
-                    className="mb-2.5 text-[20px] font-bold uppercase tracking-[0.03em] [overflow-wrap:anywhere] [word-break:break-word] [hyphens:auto]"
+                    className="text-[20px] font-bold uppercase tracking-[0.03em] [overflow-wrap:anywhere] [word-break:break-word] [hyphens:auto]"
                     style={{ color: categoryColor }}
                   >
                     {cat.name || `Section ${ci + 1}`}
@@ -190,6 +280,7 @@ export default function MenuEditorPreview({
                 </section>
               ))
             )}
+            {showMobilePreview ? <div className="h-[18px]" /> : null}
           </div>
         </div>
       ) : (
@@ -201,7 +292,7 @@ export default function MenuEditorPreview({
   );
 
   return (
-    <div className={`mx-auto flex h-full w-full flex-col items-center justify-center py-3 px-2 sm:px-3 ${showMobilePreview ? "max-w-[320px]" : "max-w-[720px]"}`}>
+    <div className={`mx-auto flex h-full w-full flex-col items-center justify-center py-3 px-3 sm:px-3 max-w-sm`}>
 
       {/* <div className="mb-3 flex items-center justify-center gap-2">
         <button type="button" className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#ececec] text-[#535353]" title="QR code">
@@ -216,32 +307,9 @@ export default function MenuEditorPreview({
       </div> */}
 
       {showMobilePreview ? (
-        <div className="relative w-full overflow-visible py-1">
-          <div className="pointer-events-none absolute -inset-4 rounded-[3rem] bg-gradient-to-b from-[#d8e5df]/80 via-transparent to-[#c5d4cc]/40 blur-2xl sm:-inset-6" aria-hidden />
-
-          <div className="relative mx-auto aspect-[1/2] h-[clamp(520px,min(56dvh,calc(100dvh-11rem)),min(600px,calc(100dvh-9rem)))] w-auto max-w-full rounded-[2.65rem] bg-gradient-to-b from-[#3a3a3a] via-[#1f1f1f] to-[#141414] p-[11px] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.06)_inset]">
-            <div className="absolute -left-[2px] top-[18%] h-8 w-[3px] rounded-l-sm bg-[#2a2a2a] shadow-sm" aria-hidden />
-            <div className="absolute -right-[2px] top-[22%] h-14 w-[3px] rounded-r-sm bg-[#2a2a2a] shadow-sm" aria-hidden />
-            <div className="absolute -right-[2px] top-[38%] h-14 w-[3px] rounded-r-sm bg-[#2a2a2a] shadow-sm" aria-hidden />
-
-            <div className="flex h-full flex-col overflow-hidden rounded-[2.05rem] bg-black ring-1 ring-white/[0.08]">
-              <div className="relative z-10 shrink-0 bg-white">
-                <div className="flex justify-center pt-2">
-                  <div className="flex h-[28px] w-[112px] items-center justify-center rounded-full bg-black shadow-md ring-1 ring-white/10" aria-hidden>
-                    <div className="h-2 w-2 rounded-full bg-[#1a1a1a]" />
-                  </div>
-                </div>
-                <StatusBar />
-              </div>
-              {previewBody}
-              <div className="flex shrink-0 justify-center bg-white pb-2 pt-1.5">
-                <div className="h-1 w-[108px] rounded-full bg-[#0a0a0a]/20" aria-hidden />
-              </div>
-            </div>
-          </div>
-        </div>
+        <MobileDeviceFrame variant={previewDevice === "pixel" ? "pixel" : "iphone"}>{previewBody}</MobileDeviceFrame>
       ) : (
-        <div className="flex h-full w-sm max-w-sm min-h-0 flex-col overflow-hidden rounded-2xl border border-[#dedede] bg-white shadow-sm">
+        <div className="flex aspect-[1/2] h-[clamp(520px,min(56dvh,calc(100dvh-11rem)),min(600px,calc(100dvh-9rem)))] w-[300px] max-w-sm min-h-0 flex-col overflow-hidden rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.06)_inset]">
           {previewBody}
         </div>
       )}

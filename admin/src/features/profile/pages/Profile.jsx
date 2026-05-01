@@ -11,6 +11,7 @@ import {
   mergeMenuUiSettings,
   getProfileAvatar,
   saveProfileAvatar,
+  INTERACTIVE_MENU_PANEL_BG,
   INTERACTIVE_THEME_DEFAULTS,
 } from "../../menu/menuUiSettings";
 
@@ -20,6 +21,7 @@ export default function Profile() {
   const refreshUser = useAuthStore((s) => s.refreshUser);
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  const [editingBusinessName, setEditingBusinessName] = useState(false);
   const [savingName, setSavingName] = useState(false);
   const [savingTheme, setSavingTheme] = useState(false);
   const [savingLogo, setSavingLogo] = useState(false);
@@ -38,7 +40,6 @@ export default function Profile() {
       itemsColor: t.itemsColor || d.itemsColor,
       categoryColor: t.categoryColor || t.categoryTextColor || d.categoryColor,
       priceColor: t.priceColor || t.priceTextColor || d.priceColor,
-      menuCardColor: t.menuCardColor || t.cardColor || d.menuCardColor,
       currencySymbol: t.currencySymbol || d.currencySymbol,
     };
   });
@@ -49,7 +50,10 @@ export default function Profile() {
   };
 
   const name = user?.business_name || user?.shop_name || user?.email || "Your place";
-  const handle = user?.business_slug ? `@${user.business_slug}` : user?.email || "";
+  const slugLine = user?.business_slug ? `@${user.business_slug}` : "";
+  const accountEmail = String(user?.email || "").trim();
+  const showEmailUnderLogo =
+    Boolean(accountEmail) && (Boolean(slugLine) || name !== accountEmail);
   const avatarLabel = useMemo(() => (shopName || name || "?").charAt(0).toUpperCase(), [shopName, name]);
 
   const { url: publicUrl, ok: menuOk, reason } = getPublicMenuUrl(user);
@@ -69,6 +73,12 @@ export default function Profile() {
       void 0;
     }
   };
+
+  useEffect(() => {
+    if (!editingBusinessName) {
+      setShopName(user?.business_name || user?.shop_name || "");
+    }
+  }, [user?.business_name, user?.shop_name, user?.id, editingBusinessName]);
 
   useEffect(() => {
     const fromServer = user?.shop_logo_data_url;
@@ -94,7 +104,13 @@ export default function Profile() {
       return;
     }
     await refreshUser();
+    setEditingBusinessName(false);
     toast.success("Profile name updated");
+  };
+
+  const cancelBusinessNameEdit = () => {
+    setShopName(user?.business_name || user?.shop_name || "");
+    setEditingBusinessName(false);
   };
 
   const onAvatarPick = async (ev) => {
@@ -154,7 +170,7 @@ export default function Profile() {
     toast.success("Logo removed");
   };
 
-  const patchSettings = async (patch) => {
+  const patchSettings = async (patch, successMessage = "Settings updated") => {
     const next = mergeMenuUiSettings(settings, patch);
     saveMenuUiSettings(next);
     setSettings(next);
@@ -164,7 +180,7 @@ export default function Profile() {
       return;
     }
     await refreshUser();
-    toast.success("Settings updated");
+    toast.success(successMessage);
   };
 
   useEffect(() => {
@@ -179,48 +195,138 @@ export default function Profile() {
       itemsColor: t.itemsColor || d.itemsColor,
       categoryColor: t.categoryColor || t.categoryTextColor || d.categoryColor,
       priceColor: t.priceColor || t.priceTextColor || d.priceColor,
-      menuCardColor: t.menuCardColor || t.cardColor || d.menuCardColor,
       currencySymbol: t.currencySymbol || d.currencySymbol,
     });
   }, [settings.interactiveTheme]);
 
   const handleSaveTheme = async () => {
     setSavingTheme(true);
-    await patchSettings({
-      interactiveTheme: {
-        surface: themeDraft.surface,
-        surfaceTextColor: themeDraft.surfaceTextColor,
-        brandNameColor: themeDraft.brandNameColor,
-        itemsColor: themeDraft.itemsColor,
-        categoryColor: themeDraft.categoryColor,
-        priceColor: themeDraft.priceColor,
-        menuCardColor: themeDraft.menuCardColor,
-        currencySymbol: themeDraft.currencySymbol,
+    await patchSettings(
+      {
+        interactiveTheme: {
+          surface: themeDraft.surface,
+          surfaceTextColor: themeDraft.surfaceTextColor,
+          brandNameColor: themeDraft.brandNameColor,
+          itemsColor: themeDraft.itemsColor,
+          categoryColor: themeDraft.categoryColor,
+          priceColor: themeDraft.priceColor,
+          menuCardColor: INTERACTIVE_MENU_PANEL_BG,
+          currencySymbol: themeDraft.currencySymbol,
+        },
       },
-    });
+      "Theme saved",
+    );
     setSavingTheme(false);
   };
 
+  const handleResetThemeDefaults = async () => {
+    const d = INTERACTIVE_THEME_DEFAULTS;
+    const nextDraft = {
+      surface: d.surface,
+      surfaceTextColor: d.surfaceTextColor,
+      brandNameColor: d.brandNameColor,
+      itemsColor: d.itemsColor,
+      categoryColor: d.categoryColor,
+      priceColor: d.priceColor,
+      currencySymbol: d.currencySymbol,
+    };
+    setThemeDraft(nextDraft);
+    setSavingTheme(true);
+    await patchSettings(
+      {
+        interactiveTheme: {
+          surface: nextDraft.surface,
+          surfaceTextColor: nextDraft.surfaceTextColor,
+          brandNameColor: nextDraft.brandNameColor,
+          itemsColor: nextDraft.itemsColor,
+          categoryColor: nextDraft.categoryColor,
+          priceColor: nextDraft.priceColor,
+          menuCardColor: INTERACTIVE_MENU_PANEL_BG,
+          currencySymbol: nextDraft.currencySymbol,
+        },
+      },
+      "Theme reset to defaults",
+    );
+    setSavingTheme(false);
+  };
+
+  const cp =
+    "h-9 w-9 shrink-0 cursor-pointer outline-none ring-neutral-900/5 focus-visible:ring-2 focus-visible:ring-neutral-300";
+
+  const themeRow =
+    "flex min-h-[3rem] items-center justify-between gap-4 rounded-xl border border-neutral-100 bg-neutral-50/60 px-4 py-3";
+
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-4 px-2 py-6">
-      <section className="rounded-xl border border-[#dbdbdb] bg-white p-4 shadow-sm">
+    <div className="mx-auto w-full max-w-3xl space-y-4 px-4 py-8 sm:px-6">
+      <section className="rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] p-4 shadow-sm">
         <div className="mb-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-[#8e8e8e]">Business logo</p>
           <p className="text-xs text-[#737373]">Square images look best. Max 2 MB. Saved to your account so it follows you on any device.</p>
         </div>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl bg-[#efefef] text-2xl font-semibold text-[#8e8e8e]">
+        <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between md:gap-8">
+          <div className="flex min-w-0 flex-1 items-start gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#efefef] text-2xl font-semibold text-[#8e8e8e]">
               {avatarDataUrl ? <img src={avatarDataUrl} alt="Business logo" className="h-full w-full object-cover" /> : avatarLabel}
             </div>
-            <div className="min-w-0">
-              <p className="truncate text-base font-semibold text-[#262626]">{name}</p>
-              {handle ? <p className="truncate text-sm text-[#737373]">{handle}</p> : null}
+            <div className="min-w-0 flex-1">
+              {!editingBusinessName ? (
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <p className="min-w-0 truncate text-base font-semibold text-[#262626]">{name}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShopName(user?.business_name || user?.shop_name || "");
+                      setEditingBusinessName(true);
+                    }}
+                    className="shrink-0 rounded-lg p-1.5 text-[#737373] transition-colors hover:bg-[#f0f0f0] hover:text-[#262626]"
+                    aria-label="Edit business name"
+                    title="Edit business name"
+                  >
+                    <Icon icon="solar:pen-bold" className="text-lg" aria-hidden />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <input
+                    value={shopName}
+                    onChange={(e) => setShopName(e.target.value)}
+                    className="w-full min-w-0 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-2 text-sm text-[#262626]"
+                    placeholder="Your business name"
+                    aria-label="Business name"
+                    autoFocus
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSaveName}
+                      disabled={savingName}
+                      className="inline-flex items-center justify-center rounded-lg bg-[#171717] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                    >
+                      {savingName ? "…" : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelBusinessNameEdit}
+                      disabled={savingName}
+                      className="inline-flex items-center justify-center rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-2 text-sm font-semibold text-[#262626] hover:bg-[#fafafa] disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+              {slugLine ? <p className="mt-0.5 truncate text-sm text-[#737373]">{slugLine}</p> : null}
+              {showEmailUnderLogo ? (
+                <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-sm text-[#737373]">
+                  <Icon icon="solar:letter-outline" className="shrink-0 text-base opacity-80" aria-hidden />
+                  <span className="truncate">{accountEmail}</span>
+                </p>
+              ) : null}
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2 md:pt-0.5">
             <label
-              className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#dbdbdb] bg-[#fafafa] px-3 py-2 text-xs font-semibold text-[#262626] hover:bg-[#f2f2f2] ${savingLogo ? "pointer-events-none opacity-50" : ""}`}
+              className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--app-border)] bg-[#fafafa] px-3 py-2 text-xs font-semibold text-[#262626] hover:bg-[#f2f2f2] ${savingLogo ? "pointer-events-none opacity-50" : ""}`}
             >
               <Icon icon="solar:gallery-add-outline" className="text-base" aria-hidden />
               {savingLogo ? "Saving…" : "Upload logo"}
@@ -241,150 +347,169 @@ export default function Profile() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-[#dbdbdb] bg-white p-4 shadow-sm">
+      <section className="rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] p-4 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#8e8e8e]">Business identity</p>
-            <h2 className="text-base font-semibold text-[#262626]">Name and public link</h2>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#8e8e8e]">Public Menu link</p>
           </div>
         </div>
-        <div className="mt-3 grid gap-4 md:grid-cols-[1.1fr_1fr]">
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-[#8e8e8e]">Business name</label>
-            <div className="flex gap-2">
+        <div className="mt-4">
+          {menuUrl && !menuUrl.startsWith("Set ") ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-stretch sm:gap-4">
               <input
-                value={shopName}
-                onChange={(e) => setShopName(e.target.value)}
-                className="w-full rounded-lg border border-[#dbdbdb] bg-white px-3 py-2 text-sm text-[#262626]"
-                placeholder="Your business name"
+                readOnly
+                value={menuUrl}
+                onFocus={(e) => e.target.select()}
+                className="min-h-[2.75rem] min-w-0 cursor-text rounded-lg border border-[var(--app-border)] bg-[#fafafa] px-3 py-2.5 font-mono text-sm text-[var(--brand-e)] outline-none focus:border-[#b5b5b5] focus:ring-2 focus:ring-[#e8e8e8]"
+                aria-label="Public menu URL"
               />
-              <button
-                type="button"
-                onClick={handleSaveName}
-                disabled={savingName}
-                className="inline-flex items-center justify-center rounded-lg bg-[#171717] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
-              >
-                {savingName ? "..." : "Save"}
-              </button>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-[#8e8e8e]">Public menu link</label>
-            {menuUrl && !menuUrl.startsWith("Set ") ? (
-              <>
-                <p className="break-all rounded-lg border border-[#dbdbdb] bg-[#fafafa] px-3 py-2 text-sm text-(--brand-e)">{menuUrl}</p>
+              <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:justify-end">
                 <button
                   type="button"
                   onClick={copyMenuLink}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#dbdbdb] bg-white px-3 py-2 text-xs font-semibold text-[#262626] hover:bg-[#f8f8f8]"
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-2 text-xs font-semibold text-[#262626] hover:bg-[#f8f8f8] sm:flex-none"
                 >
                   <Icon icon="solar:copy-outline" className="text-base" aria-hidden />
-                  {copied ? "Copied" : "Copy link"}
+                  {copied ? "Copied ✓" : "Copy link"}
                 </button>
-              </>
-            ) : (
-              <p className="rounded-lg border border-[#f3ddb9] bg-[#fff7ed] px-3 py-2 text-sm text-[#9a3412]">
-                {menuUrl || "Create a business username to generate your public menu link."}
-              </p>
-            )}
+                <a
+                  href={menuUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-2 text-xs font-semibold text-[#262626] hover:bg-[#f8f8f8] sm:flex-none"
+                >
+                  <Icon icon="solar:square-arrow-right-up-linear" className="text-base" aria-hidden />
+                  Open
+                </a>
+              </div>
+            </div>
+          ) : (
+            <p className="rounded-lg border border-[#f3ddb9] bg-[#fff7ed] px-3 py-2 text-sm text-[#9a3412]">
+              {menuUrl || "Create a business username to generate your public menu link."}
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] p-4 shadow-sm">
+        <div className="border-b border-neutral-100 pb-5">
+          <h2 className="text-base font-semibold tracking-tight text-neutral-900">Guest menu colors</h2>
+          <p className="mt-2 max-w-2xl text-xs leading-relaxed text-neutral-500">
+            For the interactive menu in the browser only—not PDFs. The category and item list uses a fixed dark
+            panel so layout stays readable; colors below control page backdrop and text accents. Edit dishes in{" "}
+            <Link to="/app/menu" className="font-semibold text-[var(--brand-e)] underline-offset-2 hover:underline">
+              Menu studio
+            </Link>
+            .
+          </p>
+        </div>
+
+        <div className="mt-6 grid gap-8">
+          <div>
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">Page</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-x-4 sm:gap-y-3">
+              <div className={themeRow}>
+                <span className="text-sm font-medium text-neutral-700">Background</span>
+                <input
+                  type="color"
+                  className={cp}
+                  value={themeDraft.surface}
+                  onChange={(e) => setThemeDraft((prev) => ({ ...prev, surface: e.target.value }))}
+                  aria-label="Page background"
+                />
+              </div>
+              <div className={themeRow}>
+                <span className="text-sm font-medium text-neutral-700">Surface text</span>
+                <input
+                  type="color"
+                  className={cp}
+                  value={themeDraft.surfaceTextColor}
+                  onChange={(e) => setThemeDraft((prev) => ({ ...prev, surfaceTextColor: e.target.value }))}
+                  aria-label="Surface text"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">Menu</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-x-4 sm:gap-y-3">
+              <div className={themeRow}>
+                <span className="text-sm font-medium text-neutral-700">Brand title</span>
+                <input
+                  type="color"
+                  className={cp}
+                  value={themeDraft.brandNameColor}
+                  onChange={(e) => setThemeDraft((prev) => ({ ...prev, brandNameColor: e.target.value }))}
+                  aria-label="Brand title color"
+                />
+              </div>
+              <div className={themeRow}>
+                <span className="text-sm font-medium text-neutral-700">Items &amp; descriptions</span>
+                <input
+                  type="color"
+                  className={cp}
+                  value={themeDraft.itemsColor}
+                  onChange={(e) => setThemeDraft((prev) => ({ ...prev, itemsColor: e.target.value }))}
+                  aria-label="Items color"
+                />
+              </div>
+              <div className={themeRow}>
+                <span className="text-sm font-medium text-neutral-700">Categories</span>
+                <input
+                  type="color"
+                  className={cp}
+                  value={themeDraft.categoryColor}
+                  onChange={(e) => setThemeDraft((prev) => ({ ...prev, categoryColor: e.target.value }))}
+                  aria-label="Category headings color"
+                />
+              </div>
+              <div className={themeRow}>
+                <span className="text-sm font-medium text-neutral-700">Prices</span>
+                <input
+                  type="color"
+                  className={cp}
+                  value={themeDraft.priceColor}
+                  onChange={(e) => setThemeDraft((prev) => ({ ...prev, priceColor: e.target.value }))}
+                  aria-label="Prices color"
+                />
+              </div>
+              <div className={`${themeRow} sm:col-span-2`}>
+                <span className="text-sm font-medium text-neutral-700">Currency</span>
+                <input
+                  value={themeDraft.currencySymbol}
+                  onChange={(e) => setThemeDraft((prev) => ({ ...prev, currencySymbol: e.target.value.slice(0, 6) }))}
+                  className="w-full max-w-[8rem] rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-neutral-200 sm:max-w-[10rem]"
+                  placeholder="Rs."
+                  aria-label="Currency symbol"
+                />
+              </div>
+            </div>
           </div>
         </div>
+
+        <div className="mt-8 grid grid-cols-1 gap-3 border-t border-neutral-100 pt-6 sm:grid-cols-2 sm:gap-4">
+          <button
+            type="button"
+            onClick={handleSaveTheme}
+            disabled={savingTheme}
+            className="inline-flex min-h-[2.75rem] items-center justify-center rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-opacity hover:bg-neutral-800 disabled:opacity-50"
+          >
+            {savingTheme ? "Saving…" : "Save theme"}
+          </button>
+          <button
+            type="button"
+            onClick={handleResetThemeDefaults}
+            disabled={savingTheme}
+            className="inline-flex min-h-[2.75rem] items-center justify-center gap-2 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-2.5 text-sm font-semibold text-neutral-800 shadow-sm transition-colors hover:bg-neutral-50 disabled:opacity-50"
+          >
+            <Icon icon="solar:restart-linear" className="text-lg text-neutral-600" aria-hidden />
+            Reset to default
+          </button>
+        </div>
       </section>
 
-      <section className="space-y-3 rounded-xl border border-[#dbdbdb] bg-white p-4 shadow-sm">
-        <p className="text-sm font-semibold text-[#262626]">Interactive menu theme</p>
-        <p className="text-xs text-[#737373]">
-          PDF menu does not use these colors. They apply to the public interactive menu and guest layout. Toggle buttons on the menu page
-          use fixed styling. Use{" "}
-          <Link to="/app/menu" className="font-semibold text-brand-e underline-offset-2 hover:underline">
-            Menu studio
-          </Link>{" "}
-          to edit items and preview.
-        </p>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#8e8e8e]">Page</p>
-        <div className="flex items-center justify-between text-sm">
-          <span>Background (page)</span>
-          <input
-            type="color"
-            value={themeDraft.surface}
-            onChange={(e) => setThemeDraft((prev) => ({ ...prev, surface: e.target.value }))}
-          />
-        </div>
-        <div className="flex items-center justify-between text-sm">
-          <span>Surface text (QR line, sidebar helper)</span>
-          <input
-            type="color"
-            value={themeDraft.surfaceTextColor}
-            onChange={(e) => setThemeDraft((prev) => ({ ...prev, surfaceTextColor: e.target.value }))}
-          />
-        </div>
-        <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-[#8e8e8e]">Menu</p>
-        <div className="flex items-center justify-between text-sm">
-          <span>Brand name</span>
-          <input
-            type="color"
-            value={themeDraft.brandNameColor}
-            onChange={(e) => setThemeDraft((prev) => ({ ...prev, brandNameColor: e.target.value }))}
-          />
-        </div>
-        <div className="flex items-center justify-between text-sm">
-          <span>Items &amp; descriptions</span>
-          <input
-            type="color"
-            value={themeDraft.itemsColor}
-            onChange={(e) => setThemeDraft((prev) => ({ ...prev, itemsColor: e.target.value }))}
-          />
-        </div>
-        <div className="flex items-center justify-between text-sm">
-          <span>Category headings</span>
-          <input
-            type="color"
-            value={themeDraft.categoryColor}
-            onChange={(e) => setThemeDraft((prev) => ({ ...prev, categoryColor: e.target.value }))}
-          />
-        </div>
-        <div className="flex items-center justify-between text-sm">
-          <span>Prices</span>
-          <input
-            type="color"
-            value={themeDraft.priceColor}
-            onChange={(e) => setThemeDraft((prev) => ({ ...prev, priceColor: e.target.value }))}
-          />
-        </div>
-        <div className="flex items-center justify-between text-sm">
-          <span>Menu card (content panel)</span>
-          <input
-            type="color"
-            value={themeDraft.menuCardColor}
-            onChange={(e) => setThemeDraft((prev) => ({ ...prev, menuCardColor: e.target.value }))}
-          />
-        </div>
-        <div className="flex items-center justify-between text-sm">
-          <span>Currency label</span>
-          <input
-            value={themeDraft.currencySymbol}
-            onChange={(e) => setThemeDraft((prev) => ({ ...prev, currencySymbol: e.target.value.slice(0, 6) }))}
-            className="max-w-[120px] rounded border border-[#dbdbdb] bg-[#fafafa] px-2 py-1 text-sm"
-            placeholder="Rs."
-          />
-        </div>
-        <button
-          type="button"
-          onClick={handleSaveTheme}
-          disabled={savingTheme}
-          className="w-full rounded-lg bg-[#171717] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
-        >
-          {savingTheme ? "Saving..." : "Save theme colors"}
-        </button>
-        <Link
-          to="/app/menu"
-          className="block rounded-lg border border-[#dbdbdb] bg-[#fafafa] px-3 py-2 text-center text-xs font-semibold text-[#262626] hover:bg-[#f2f2f2]"
-        >
-          Open interactive menu editor
-        </Link>
-      </section>
-
-      <div className="overflow-hidden rounded-xl border border-[#dbdbdb] bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] shadow-sm">
         <button
           type="button"
           onClick={handleLogout}

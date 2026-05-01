@@ -860,7 +860,6 @@ const shopHasSocialRow = Boolean(socialInstagram || socialX || socialGithub || s
         const itemsColor = String(t.itemsColor || t.bodyTextColor || "#ffffff");
         const categoryColor = String(t.categoryColor || t.categoryTextColor || "#FF9423");
         const priceColor = String(t.priceColor || t.priceTextColor || "#FF9423");
-        const cardBgColor = String(t.menuCardColor || t.cardColor || "#1c1e24");
         const currencySymbol = String(t.currencySymbol || "Rs.");
         document.documentElement.style.setProperty("--theme-bg-color", themeBgColor);
         document.documentElement.style.setProperty("--bg-color", themeBgColor);
@@ -870,7 +869,7 @@ const shopHasSocialRow = Boolean(socialInstagram || socialX || socialGithub || s
         document.documentElement.style.setProperty("--items-color", itemsColor);
         document.documentElement.style.setProperty("--category-text-color", categoryColor);
         document.documentElement.style.setProperty("--price-text-color", priceColor);
-        document.documentElement.style.setProperty("--card-bg-color", cardBgColor);
+        /* Category + item list panel: fixed in :root as --card-bg-color (#1c1e24), not theme-overridden */
 
         const isPdfMode = mode === "pdf";
 
@@ -942,8 +941,8 @@ const shopHasSocialRow = Boolean(socialInstagram || socialX || socialGithub || s
             <h1 class="menu-title-heading" style="margin: 50px 0 30px;color:${esc(brandNameColor)};font-size:28px;font-weight:700;text-align: center;">${esc(shopName)}</h1>
             ${categories
               .map((cat) => `
-                <section style="margin-bottom:18px;">
-                  <h2 class="menu-cat-heading" style="margin:0 0 10px;color:${esc(categoryColor)};font-size:20px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;">${esc(cat?.name || "Menu")}</h2>
+                <section style="margin-bottom:36px;">
+                  <h2 class="menu-cat-heading" style="color:${esc(categoryColor)};font-size:20px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;">${esc(cat?.name || "Menu")}</h2>
                   ${(Array.isArray(cat?.items) ? cat.items : [])
                     .map((it) => `
                       <article style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08);">

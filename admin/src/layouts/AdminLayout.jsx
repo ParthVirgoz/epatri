@@ -24,7 +24,7 @@ const AdminLayout = () => {
     }`;
 
   return (
-    <div className="flex min-h-dvh max-h-dvh flex-col bg-[#f6f6f4]">
+    <div className="flex min-h-dvh max-h-dvh flex-col bg-[var(--app-bg)]">
       <header
         className="sticky top-0 z-20 grid h-[var(--nav-h)] shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-neutral-200/90 bg-white/85 px-[max(8px,env(safe-area-inset-left))] pr-[max(8px,env(safe-area-inset-right))] shadow-[0_1px_0_rgba(0,0,0,0.03)] backdrop-blur-xl backdrop-saturate-150"
         style={{ paddingTop: "env(safe-area-inset-top)" }}

@@ -85,7 +85,7 @@ export default function Onboarding() {
   const slugInputShellClass = useMemo(() => {
     const base =
       "flex min-h-[46px] w-full items-stretch overflow-hidden rounded-xl border bg-[#fafafa] transition-colors";
-    if (!slugPreview) return `${base} border-[#dbdbdb]`;
+    if (!slugPreview) return `${base} border-[var(--app-border)]`;
     if (!BRAND_SLUG_RE.test(slugPreview)) return `${base} border-red-300 bg-red-50/40`;
     if (slugPreview.length < MIN_SLUG_LENGTH) return `${base} border-amber-300/90 bg-amber-50/40`;
     switch (slugCheck.status) {
@@ -99,7 +99,7 @@ export default function Onboarding() {
       case "error":
         return `${base} border-amber-300 bg-amber-50/30`;
       default:
-        return `${base} border-[#dbdbdb]`;
+        return `${base} border-[var(--app-border)]`;
     }
   }, [slugPreview, slugCheck.status]);
 
@@ -366,7 +366,7 @@ export default function Onboarding() {
         <p className="mt-1 text-sm text-[#737373]">A few short steps to set your brand and location.</p>
       </div>
 
-      <div className="rounded-2xl border border-[#e6e9ef] bg-white/90 p-3 shadow-[0_16px_40px_-24px_rgba(15,23,42,0.45)]">
+      <div className="rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-3 shadow-[0_16px_40px_-24px_rgba(15,23,42,0.45)]">
         <div className="grid grid-cols-2 gap-2">
           {[
             { key: 0, title: "Brand", subtitle: "Slug + identity" },
@@ -410,7 +410,7 @@ export default function Onboarding() {
             e.preventDefault();
             void goNext();
           }}
-          className="space-y-3 rounded-xl border border-[#dbdbdb] bg-white p-4"
+          className="space-y-3 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] p-4"
         >
           <div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#8e8e8e]">Business username / slug</p>
@@ -451,7 +451,7 @@ export default function Onboarding() {
             <input
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
-              className="w-full rounded-lg border border-[#dbdbdb] bg-[#fafafa] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--app-border)] bg-[#fafafa] px-3 py-2 text-sm"
               placeholder="Shown on your public menu"
             />
           </div>
@@ -473,14 +473,14 @@ export default function Onboarding() {
             e.preventDefault();
             void goNext();
           }}
-          className="space-y-4 rounded-xl border border-[#dbdbdb] bg-white p-4"
+          className="space-y-4 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] p-4"
         >
           <p className="text-xs font-semibold uppercase tracking-wide text-[#8e8e8e]">Location details</p>
           <p className="text-sm text-[#737373]">Location is required: landmark/address + latitude + longitude.</p>
           <input
             value={singleArea}
             onChange={(e) => setSingleArea(e.target.value)}
-            className="w-full rounded-lg border border-[#dbdbdb] bg-[#fafafa] px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-[var(--app-border)] bg-[#fafafa] px-3 py-2 text-sm"
             placeholder="e.g. Vesu, Kamrej, City centre"
           />
           <LocationPlaceSearch
@@ -494,7 +494,7 @@ export default function Onboarding() {
             <button
               type="button"
               onClick={goBack}
-              className="rounded-lg border border-[#dbdbdb] bg-white px-4 py-2 text-sm font-semibold text-[#262626] hover:bg-[#fafafa]"
+              className="rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-2 text-sm font-semibold text-[#262626] hover:bg-[#fafafa]"
             >
               Back
             </button>

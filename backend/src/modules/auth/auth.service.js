@@ -286,8 +286,12 @@ export async function getCurrentUser(fastify, user) {
     if (one) accessible_locations = [one];
   }
 
+  /** Auth users always have email in JWT/session; `profiles` row may not include it. */
+  const emailFromAuth = String(user?.email || "").trim() || null;
+
   return {
     ...profile,
+    email: emailFromAuth || (typeof profile?.email === "string" ? String(profile.email).trim() || null : null),
     shop_name: business_name || null,
     business_name: business_name || null,
     pdf_url: pdf_url_out,

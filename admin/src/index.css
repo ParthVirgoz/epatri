@@ -12,14 +12,15 @@
   --brand-patri-dark: #e88718;
   --brand-patri-muted: rgba(255, 148, 35, 0.15);
 
-  --app-bg: #f7faf8;
+  /* Logged-in admin shell: one background + surfaces across Menu, Insights, Profile */
+  --app-bg: #f6f6f4;
   --app-surface: #ffffff;
   --app-border: #dbdbdb;
   --app-text: #262626;
   --app-text-secondary: #737373;
   --app-link: var(--brand-e);
   --app-link-hover: var(--brand-e-dark);
-  --nav-h: 3.25rem;
+  --nav-h: 60px;
   --bottom-nav-h: 3.5rem;
 }
 

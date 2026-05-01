@@ -39,7 +39,7 @@ export default function ShareMenuLinkButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-neutral-900 px-3 text-xs font-bold text-white shadow-md shadow-neutral-900/15 transition hover:bg-black hover:shadow-lg sm:px-4 sm:text-sm"
+        className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-neutral-900 px-3 text-xs font-bold text-white shadow-md shadow-neutral-900/15 transition hover:bg-black hover:shadow-lg sm:pr-4 sm:pl-3 sm:text-sm"
         aria-label={label}
         title={label}
       >

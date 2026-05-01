@@ -9,7 +9,7 @@ function IconButton({ label, children, onClick, disabled }) {
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex min-w-[72px] flex-col items-center gap-2 rounded-2xl p-2 text-center transition-colors hover:bg-[#f5f5f5] disabled:cursor-not-allowed disabled:opacity-40"
+      className="flex min-w-[72px] flex-col items-center gap-2 rounded-xl p-2 text-center transition-colors hover:bg-[#f5f5f5] disabled:cursor-not-allowed disabled:opacity-40"
     >
       <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f0f0f0] text-xl shadow-sm ring-1 ring-black/5">
         {children}

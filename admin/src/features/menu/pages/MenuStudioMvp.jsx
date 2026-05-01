@@ -38,6 +38,8 @@ export default function MenuStudioMvp() {
   const [showPdfLinkField, setShowPdfLinkField] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [showMobilePreview, setShowMobilePreview] = useState(false);
+  /** When device frame is on: decorative shells only (not affiliated with Apple/Google). */
+  const [previewDevice, setPreviewDevice] = useState("iphone");
 
   const { url: publicUrl, ok: publicUrlOk } = useMemo(() => getPublicMenuUrl(user), [user]);
 
@@ -176,7 +178,7 @@ export default function MenuStudioMvp() {
   }, [s?.last_published_at]);
 
   return (
-    <div className="h-[calc(100dvh-var(--nav-h)-var(--bottom-nav-h))] max-h-[calc(100dvh-var(--nav-h)-var(--bottom-nav-h))] w-full md:grid md:grid-cols-3 md:overflow-hidden">
+    <div className="h-[calc(100dvh-var(--nav-h)-var(--bottom-nav-h))] max-h-[calc(100dvh-var(--nav-h)-var(--bottom-nav-h))] w-full md:grid md:grid-cols-2 lg:grid-cols-5 xl:grid-cols-3 md:overflow-hidden">
       <ShareMenuModal
         open={shareOpen}
         onClose={() => setShareOpen(false)}
@@ -185,7 +187,7 @@ export default function MenuStudioMvp() {
         businessName={user?.business_name || user?.shop_name || user?.business_slug}
       />
 
-      <section className="col-span-2 flex min-h-0 flex-col border border-[#dbdbdb] bg-white px-2 py-4 sm:p-4 gap-4 shadow-sm">
+      <section className="md:col-span-1 lg:col-span-3 xl:col-span-2 flex min-h-0 flex-col gap-4 border border-[var(--app-border)] bg-[var(--app-surface)] px-2 py-4 shadow-sm sm:p-4">
         <div className="space-y-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
             <div className="min-w-0">
@@ -196,7 +198,7 @@ export default function MenuStudioMvp() {
               type="button"
               disabled={publishing}
               onClick={publishLive}
-              className="w-full shrink-0 rounded-xl bg-gradient-to-r from-[#1e9459] to-[#178a52] px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:shadow-lg disabled:opacity-50 sm:w-auto sm:px-5"
+              className="w-full shrink-0 rounded-lg bg-gradient-to-r from-[#1e9459] to-[#178a52] px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:shadow-lg disabled:opacity-50 sm:w-auto sm:px-5"
             >
               {publishing ? "Publishing…" : "Publish live"}
             </button>
@@ -206,7 +208,7 @@ export default function MenuStudioMvp() {
             <button
               type="button"
               onClick={() => setMode("pdf")}
-              className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${mode === "pdf" ? "bg-[#1e9459] text-white shadow" : "border border-[#dbdbdb] bg-white text-[#262626]"
+              className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${mode === "pdf" ? "bg-[#1e9459] text-white shadow" : "border border-[var(--app-border)] bg-[var(--app-surface)] text-[#262626]"
                 }`}
             >
               PDF menu
@@ -214,9 +216,9 @@ export default function MenuStudioMvp() {
             <button
               type="button"
               onClick={() => setMode("interactive")}
-              className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${mode === "interactive"
+              className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${mode === "interactive"
                 ? "bg-[#ff9423] text-white shadow"
-                : "border border-[#dbdbdb] bg-white text-[#262626]"
+                : "border border-[var(--app-border)] bg-[var(--app-surface)] text-[#262626]"
                 }`}
             >
               Interactive
@@ -242,9 +244,9 @@ export default function MenuStudioMvp() {
                 }}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={onPdfDrop}
-                className={`flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-4 py-10 text-center transition ${dragActive
+                className={`flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-10 text-center transition ${dragActive
                   ? "border-[#1e9459] bg-emerald-50/60"
-                  : "border-[#c4c4c4] bg-[#fafafa] hover:border-[#1e9459]/50 hover:bg-emerald-50/30"
+                  : "border-[var(--app-border)] bg-[#fafafa] hover:border-[#1e9459]/50 hover:bg-emerald-50/30"
                   }`}
               >
                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-2xl shadow ring-1 ring-black/5">
@@ -256,7 +258,7 @@ export default function MenuStudioMvp() {
                 </span>
               </button>
               {pdfFile ? (
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200/80 bg-emerald-50/50 px-3 py-2 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-emerald-200/80 bg-emerald-50/50 px-3 py-2 text-sm">
                   <span className="min-w-0 truncate font-medium text-emerald-950" title={pdfFile.name}>
                     {pdfFile.name}
                   </span>
@@ -289,7 +291,7 @@ export default function MenuStudioMvp() {
                   <label className="mt-2 block space-y-1.5 text-xs font-medium text-[#525252]">
                     PDF URL (https)
                     <input
-                      className="w-full rounded-lg border border-[#dbdbdb] px-3 py-2.5 text-sm shadow-sm"
+                      className="w-full rounded-lg border border-[var(--app-border)] px-3 py-2.5 text-sm shadow-sm"
                       placeholder="https://cdn.example.com/menu.pdf"
                       value={pdfUrl}
                       onChange={(e) => setPdfUrl(e.target.value)}
@@ -306,20 +308,48 @@ export default function MenuStudioMvp() {
         </div>
       </section>
 
-      <section className="sticky top-0 hidden h-[calc(100dvh-var(--nav-h)-var(--bottom-nav-h))] min-h-[60vh] flex-col border border-[#dbdbdb] shadow-sm md:flex">
-        <div className="flex items-center justify-between border-b border-neutral-200 bg-white px-3 py-2">
+      <section className="md:col-span-1 lg:col-span-2 xl:col-span-1 sticky top-0 hidden h-[calc(100dvh-var(--nav-h)-var(--bottom-nav-h))] min-h-[60vh] flex-col border border-[var(--app-border)] bg-[var(--app-surface)] shadow-sm md:flex">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 bg-[var(--app-surface)] px-3 py-2">
           <p className="text-[11px] font-bold uppercase tracking-wide text-[#737373]">Preview</p>
-          <button
-            type="button"
-            onClick={() => setShowMobilePreview((v) => !v)}
-            className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-              showMobilePreview ? "bg-[#e8f7ef] text-[#0b8a5a]" : "bg-[#efefef] text-[#5f5f5f]"
-            }`}
-          >
-            Mobile frame {showMobilePreview ? "On" : "Off"}
-          </button>
+          <div className="flex flex-wrap items-center justify-end gap-1.5">
+            <button
+              type="button"
+              onClick={() => setShowMobilePreview((v) => !v)}
+              className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                showMobilePreview ? "bg-[#e8f7ef] text-[#0b8a5a]" : "bg-[#efefef] text-[#5f5f5f]"
+              }`}
+            >
+              Device frame {showMobilePreview ? "On" : "Off"}
+            </button>
+            {showMobilePreview ? (
+              <div
+                className="inline-flex rounded-full border border-neutral-200 bg-neutral-100/90 p-0.5"
+                role="group"
+                aria-label="Preview device style"
+              >
+                <button
+                  type="button"
+                  onClick={() => setPreviewDevice("iphone")}
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                    previewDevice === "iphone" ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-600"
+                  }`}
+                >
+                  iPhone
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDevice("pixel")}
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                    previewDevice === "pixel" ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-600"
+                  }`}
+                >
+                  Pixel
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-hidden border border-neutral-100 bg-[#f6f6f4]">
+        <div className="min-h-0 flex-1 overflow-hidden border border-neutral-100 bg-[var(--app-bg)]">
           <MenuEditorPreview
             format={mode}
             pdfUrl={mode === "pdf" ? pdfUrl : null}
@@ -329,6 +359,7 @@ export default function MenuStudioMvp() {
             interactiveTheme={uiSettings.interactiveTheme}
             businessName={user?.business_name || user?.shop_name || user?.business_slug || "Menu"}
             showMobilePreview={showMobilePreview}
+            previewDevice={previewDevice}
           />
         </div>
       </section>

@@ -68,7 +68,7 @@ function MetricCard({ title, value, hint, tone = "neutral" }) {
   const toneClass =
     tone === "positive" ? "text-[#0f6b47]" : tone === "negative" ? "text-[#b42318]" : "text-[#262626]";
   return (
-    <div className="rounded-xl border border-[#dbdbdb] bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] p-4 shadow-sm">
       <p className="text-xs font-semibold uppercase tracking-wide text-[#8e8e8e]">{title}</p>
       <p className={`mt-2 text-2xl font-semibold tabular-nums ${toneClass}`}>{value}</p>
       {hint ? <p className="mt-1 text-xs text-[#8e8e8e]">{hint}</p> : null}
@@ -332,15 +332,15 @@ export default function AnalyticsDashboard() {
   const growthHint = growth?.period_days === 1 ? "vs yesterday" : `vs prior ${growth?.period_days || 0} days`;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 py-6">
-      <div className="rounded-xl border border-[#dbdbdb] bg-white p-4 shadow-sm">
+    <div className="mx-auto max-w-4xl space-y-4 px-4 py-6 sm:px-6">
+      <div className="rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] p-4 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-lg font-semibold text-[#262626]">Insights</h2>
-          <span className="rounded-full border border-[#e8e8e8] bg-white px-2 py-0.5 text-[11px] font-medium text-[#6a6a6a]">
+          <span className="rounded-full border border-[#e8e8e8] bg-[var(--app-surface)] px-2 py-0.5 text-[11px] font-medium text-[#6a6a6a]">
             {streamState === "live" ? "Live stream on" : streamState === "connecting" ? "Connecting…" : "Stream offline"}
           </span>
           {refreshing ? (
-            <span className="rounded-full border border-[#dbdbdb] bg-white px-2 py-0.5 text-[11px] text-[#737373]">Updating…</span>
+            <span className="rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] px-2 py-0.5 text-[11px] text-[#737373]">Updating…</span>
           ) : null}
           <span className="rounded-full border border-emerald-200/90 bg-emerald-50/80 px-2 py-0.5 text-[11px] font-semibold text-[#0f6b47]">
             Live events: {liveEventCount}
@@ -366,7 +366,7 @@ export default function AnalyticsDashboard() {
               if (v) sessionStorage.setItem("epatri_insights_location_id", v);
               else sessionStorage.removeItem("epatri_insights_location_id");
             }}
-            className="rounded-full border border-[#dbdbdb] bg-white px-4 py-2 text-sm font-medium text-[#262626] shadow-sm"
+            className="rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-2 text-sm font-medium text-[#262626] shadow-sm"
           >
             <option value="">All outlets</option>
             {accessibleLocations.map((loc) => (
@@ -379,7 +379,7 @@ export default function AnalyticsDashboard() {
         <select
           value={viewMode}
           onChange={(e) => setViewMode(e.target.value)}
-          className="rounded-full border border-[#dbdbdb] bg-white px-4 py-2 text-sm font-medium text-[#262626] shadow-sm"
+          className="rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-2 text-sm font-medium text-[#262626] shadow-sm"
         >
           <option value="summary">Overview</option>
           <option value="detail">Recent visits</option>
@@ -388,7 +388,7 @@ export default function AnalyticsDashboard() {
 
       {viewMode === "summary" ? (
         <>
-          <div className="rounded-xl border border-[#dbdbdb] bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] p-4 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-[#8e8e8e]">Date range</p>
             <div className="mt-3 flex flex-wrap gap-2">
               {[
@@ -409,7 +409,7 @@ export default function AnalyticsDashboard() {
               <button
                 type="button"
                 onClick={() => setShowAdvancedDateFilter((v) => !v)}
-                className="rounded-full border border-[#dbdbdb] bg-white px-4 py-2 text-sm font-semibold text-[#262626]"
+                className="rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-2 text-sm font-semibold text-[#262626]"
               >
                 {showAdvancedDateFilter ? "Hide full filter" : "Open full filter"}
               </button>
@@ -421,14 +421,14 @@ export default function AnalyticsDashboard() {
                   value={dateRange.start}
                   max={dateRange.end}
                   onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                  className="w-full rounded-lg border border-[#dbdbdb] bg-[#fafafa] px-3 py-2.5 text-sm"
+                  className="w-full rounded-lg border border-[var(--app-border)] bg-[#fafafa] px-3 py-2.5 text-sm"
                 />
                 <input
                   type="date"
                   value={dateRange.end}
                   min={dateRange.start}
                   onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                  className="w-full rounded-lg border border-[#dbdbdb] bg-[#fafafa] px-3 py-2.5 text-sm"
+                  className="w-full rounded-lg border border-[var(--app-border)] bg-[#fafafa] px-3 py-2.5 text-sm"
                 />
               </div>
             ) : null}
@@ -440,7 +440,7 @@ export default function AnalyticsDashboard() {
             <MetricCard title="Growth rate" value={growthLabel(growth)} hint={growthHint} tone={growthTone} />
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-[#dbdbdb] bg-white shadow-sm">
+          <div className="overflow-hidden rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] shadow-sm">
             <div className="border-b border-[#efefef] px-4 py-3 text-xs text-[#737373]">
               {isTodayOnly ? "Today view focuses on live KPI cards." : "Day-by-day opens for selected range."}
             </div>
@@ -469,7 +469,7 @@ export default function AnalyticsDashboard() {
           </div>
         </>
       ) : (
-        <div className="overflow-x-auto rounded border border-[#dbdbdb] bg-white">
+        <div className="overflow-x-auto rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)]">
           <table className={`w-full text-left text-xs ${showAdvancedInsights ? "min-w-[720px]" : "min-w-[520px]"}`}>
             <thead>
               <tr className="border-b border-[#efefef] text-[#8e8e8e]">

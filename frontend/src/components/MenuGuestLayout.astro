@@ -74,7 +74,8 @@ const socialLinkedin = String(import.meta.env.PUBLIC_SOCIAL_LINKEDIN || "").trim
 const hasSocialRow = Boolean(socialInstagram || socialX || socialGithub || socialLinkedin);
 
 const dm = interactiveTheme && typeof interactiveTheme === "object" ? interactiveTheme : {};
-const dmCard = String(dm.menuCardColor || dm.cardColor || "#1c1e24");
+/** Fixed panel behind categories + items (not theme-overridden) for consistent readability */
+const dmCard = "#1c1e24";
 const dmCatColor = String(dm.categoryColor || dm.categoryTextColor || "#FF9423");
 const dmItemsColor = String(dm.itemsColor || dm.bodyTextColor || "#ffffff");
 const dmPriceColor = String(dm.priceColor || dm.priceTextColor || "#FF9423");
