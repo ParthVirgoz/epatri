@@ -9,8 +9,6 @@ import {
   getMenuUiSettings,
   saveMenuUiSettings,
   mergeMenuUiSettings,
-  getProfileAvatar,
-  saveProfileAvatar,
   INTERACTIVE_MENU_PANEL_BG,
   INTERACTIVE_THEME_DEFAULTS,
 } from "../../menu/menuUiSettings";
@@ -26,9 +24,7 @@ export default function Profile() {
   const [savingTheme, setSavingTheme] = useState(false);
   const [savingLogo, setSavingLogo] = useState(false);
   const [shopName, setShopName] = useState(user?.business_name || user?.shop_name || "");
-  const [avatarDataUrl, setAvatarDataUrl] = useState(
-    () => user?.shop_logo_data_url || getProfileAvatar() || "",
-  );
+  const [avatarDataUrl, setAvatarDataUrl] = useState(() => user?.shop_logo_data_url || "");
   const [settings, setSettings] = useState(() => mergeMenuUiSettings(getMenuUiSettings(), user?.preferences || {}));
   const [themeDraft, setThemeDraft] = useState(() => {
     const t = settings.interactiveTheme || {};
@@ -81,13 +77,7 @@ export default function Profile() {
   }, [user?.business_name, user?.shop_name, user?.id, editingBusinessName]);
 
   useEffect(() => {
-    const fromServer = user?.shop_logo_data_url;
-    if (fromServer) {
-      setAvatarDataUrl(fromServer);
-      return;
-    }
-    const cached = getProfileAvatar();
-    setAvatarDataUrl(cached || "");
+    setAvatarDataUrl(user?.shop_logo_data_url || "");
   }, [user?.shop_logo_data_url, user?.id]);
 
   const handleSaveName = async () => {
@@ -148,7 +138,6 @@ export default function Profile() {
         return;
       }
       setAvatarDataUrl(data);
-      saveProfileAvatar(data);
       await refreshUser();
       toast.success("Business logo saved to your account");
     };
@@ -165,7 +154,6 @@ export default function Profile() {
       return;
     }
     setAvatarDataUrl("");
-    saveProfileAvatar("");
     await refreshUser();
     toast.success("Logo removed");
   };

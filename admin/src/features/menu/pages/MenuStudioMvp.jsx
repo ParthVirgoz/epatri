@@ -14,6 +14,7 @@ import { validateDigitalMenuClient } from "../validateDigitalMenuClient";
 import { mergeMenuUiSettings, getMenuUiSettings } from "../menuUiSettings";
 import { MAX_PDF_UPLOAD_BYTES } from "../menuConstants";
 import { getPublicMenuUrl } from "../../../utils/menuPublicUrl";
+import { runBrandConfettiBurst } from "../../../utils/brandConfetti";
 
 function validatePickedPdf(file) {
   if (file.type !== "application/pdf") {
@@ -25,10 +26,44 @@ function validatePickedPdf(file) {
   return null;
 }
 
+function hasInteractiveContent(dm) {
+  const cats = dm?.categories;
+  return Array.isArray(cats) && cats.length > 0;
+}
+
+/** Stable JSON for comparing interactive menu payloads (key order–independent). */
+function stableStringify(value) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  const keys = Object.keys(value).sort();
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(value[k])}`).join(",")}}`;
+}
+
+function cloneDigitalMenu(dm) {
+  try {
+    return dm && typeof dm === "object" ? structuredClone(dm) : { categories: [] };
+  } catch {
+    return JSON.parse(JSON.stringify(dm && typeof dm === "object" ? dm : { categories: [] }));
+  }
+}
+
+/** Snapshot of last synced server menu (GET mine / after save paths). */
+function baselineFromStudioResponse(data) {
+  const src = data?.draft || data?.published;
+  if (!src) return null;
+  return {
+    menu_type: src.menu_type || "pdf",
+    pdf_url: String(src.pdf_url || "").trim(),
+    digital_menu: cloneDigitalMenu(src.digital_menu),
+  };
+}
+
 export default function MenuStudioMvp() {
   const user = useAuthStore((s) => s.user);
   const pdfInputRef = useRef(null);
   const [s, setS] = useState(null);
+  /** Last server-aligned editor snapshot; `null` = no published/draft row yet. */
+  const [baseline, setBaseline] = useState(null);
   const [mode, setMode] = useState("pdf");
   const [pdfUrl, setPdfUrl] = useState("");
   const [pdfFile, setPdfFile] = useState(null);
@@ -58,6 +93,7 @@ export default function MenuStudioMvp() {
       return;
     }
     setS(data);
+    setBaseline(baselineFromStudioResponse(data));
     const src = data?.draft || data?.published;
     if (!src) return;
     setMode(src.menu_type || "pdf");
@@ -97,7 +133,28 @@ export default function MenuStudioMvp() {
     applyPdfFile(file);
   };
 
+  const hasRenderableMenu = useMemo(() => {
+    if (mode === "pdf") return Boolean(pdfFile || String(pdfUrl || "").trim());
+    return hasInteractiveContent(digitalObj);
+  }, [mode, pdfFile, pdfUrl, digitalObj]);
+
+  const isDirtyVersusBaseline = useMemo(() => {
+    if (pdfFile) return true;
+    if (baseline === null) return hasRenderableMenu;
+    if (mode !== baseline.menu_type) return true;
+    if (mode === "pdf") {
+      return String(pdfUrl || "").trim() !== baseline.pdf_url;
+    }
+    return stableStringify(digitalObj) !== stableStringify(baseline.digital_menu);
+  }, [baseline, mode, pdfUrl, pdfFile, digitalObj, hasRenderableMenu]);
+
+  const canPublishLive = Boolean(s) && !publishing && isDirtyVersusBaseline && hasRenderableMenu;
+
   const publishLive = async () => {
+    if (!canPublishLive) return;
+
+    const hadPublishedBefore = Boolean(s?.last_published_at);
+
     if (mode === "interactive") {
       const err = validateDigitalMenuClient(digitalObj);
       if (err) {
@@ -124,6 +181,7 @@ export default function MenuStudioMvp() {
         const src = fresh?.draft || fresh?.published;
         nextPdfUrl = String(src?.pdf_url || "").trim();
         setS(fresh);
+        setBaseline(baselineFromStudioResponse(fresh));
         setPdfUrl(nextPdfUrl);
         setPdfFile(null);
         if (!nextPdfUrl) {
@@ -148,6 +206,7 @@ export default function MenuStudioMvp() {
         return;
       }
       setS(data);
+      /* Baseline is refreshed after publish only so a failed publish can retry without blocking the button. */
 
       const [pubData, perr] = await publishDraftMenuStudioApi();
       if (perr) {
@@ -155,7 +214,13 @@ export default function MenuStudioMvp() {
         return;
       }
       setS(pubData);
+      setBaseline(baselineFromStudioResponse(pubData));
       toast.success("Your menu is live for guests.");
+      if (!hadPublishedBefore) {
+        runBrandConfettiBurst();
+        /* Let confetti paint a frame before the share sheet mounts (same tick can feel “missing”). */
+        window.setTimeout(() => setShareOpen(true), 120);
+      }
     } catch (e) {
       toast.error(e?.message || "Could not publish.");
     } finally {
@@ -196,9 +261,20 @@ export default function MenuStudioMvp() {
             </div>
             <button
               type="button"
-              disabled={publishing}
+              disabled={!canPublishLive}
               onClick={publishLive}
-              className="w-full shrink-0 rounded-lg bg-gradient-to-r from-[#1e9459] to-[#178a52] px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:shadow-lg disabled:opacity-50 sm:w-auto sm:px-5"
+              title={
+                !s || publishing
+                  ? undefined
+                  : !hasRenderableMenu
+                    ? mode === "pdf"
+                      ? "Add or upload a PDF before publishing."
+                      : "Add at least one category before publishing."
+                    : !isDirtyVersusBaseline
+                      ? "Save changes here first — nothing new to publish."
+                      : undefined
+              }
+              className="w-full shrink-0 rounded-lg bg-gradient-to-r from-[#1e9459] to-[#178a52] px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:px-5"
             >
               {publishing ? "Publishing…" : "Publish live"}
             </button>

@@ -1,6 +1,7 @@
 import {
   registerUser,
   loginUser,
+  refreshAccessToken,
   getCurrentUser,
   updateCurrentUser,
   forgotPassword,
@@ -10,6 +11,7 @@ import { decodePasswordBody } from "../../utils/passwordEncryption.js";
 import {
   loginSchema,
   registerSchema,
+  refreshSessionSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
   updateMeSchema,
@@ -34,6 +36,17 @@ export async function loginController(req, reply) {
     const status = err.status || err.statusCode || 400;
     const message = err.message || 'Login failed';
     req.log.error('Login failed', { message, status, email: req.body?.email });
+    return reply.code(status).send({ message });
+  }
+}
+
+export async function refreshController(req, reply) {
+  try {
+    const parsed = refreshSessionSchema.parse(req.body || {});
+    return await refreshAccessToken(req.server, parsed);
+  } catch (err) {
+    const status = err.status || err.statusCode || 400;
+    const message = err.message || 'Refresh failed';
     return reply.code(status).send({ message });
   }
 }

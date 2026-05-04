@@ -15,9 +15,15 @@ import MenuStudioMvp from "../features/menu/pages/MenuStudioMvp";
 import AnalyticsDashboard from "../features/analytics/AnalyticsDashboard";
 import Profile from "../features/profile/pages/Profile";
 import Onboarding from "../features/onboarding/pages/Onboarding";
+import SessionExpiryWatcher from "../features/auth/SessionExpiryWatcher";
 
 function AppRoot() {
-  return <Outlet />;
+  return (
+    <>
+      <SessionExpiryWatcher />
+      <Outlet />
+    </>
+  );
 }
 
 export const router = createBrowserRouter([

@@ -170,13 +170,39 @@ export async function loginUser(fastify, data) {
 
     return {
       access_token: loginData.session.access_token,
-      expires_in: 60 * 60 * 24,
+      refresh_token: loginData.session.refresh_token,
+      expires_in: loginData.session.expires_in ?? 3600,
       user: loginData.user,
     };
   } catch (err) {
     fastify.log.error('[loginUser] exception', err);
     throw err;
   }
+}
+
+export async function refreshAccessToken(fastify, { refresh_token: refreshToken }) {
+  if (!refreshToken) {
+    const err = new Error('refresh_token is required');
+    err.status = 400;
+    throw err;
+  }
+
+  const { data, error } = await fastify.supabase.auth.refreshSession({
+    refresh_token: refreshToken,
+  });
+
+  if (error || !data?.session) {
+    fastify.log.warn('[refreshAccessToken] failed', error?.message);
+    const err = new Error(error?.message || 'Session refresh failed');
+    err.status = 401;
+    throw err;
+  }
+
+  return {
+    access_token: data.session.access_token,
+    refresh_token: data.session.refresh_token,
+    expires_in: data.session.expires_in ?? 3600,
+  };
 }
 
 export async function getCurrentUser(fastify, user) {

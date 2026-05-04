@@ -1,6 +1,6 @@
 /**
- * Shared auth email/password policy for admin API and admin SPA.
- * Keep behavior aligned across backend Zod schemas and react-hook-form.
+ * Single source for email allowlists, disposable-domain blocks, password regex, and messages.
+ * Imported by `backend` (Zod) and `admin` (forms / copy). Do not copy these lists elsewhere.
  */
 
 /** Domains and subdomains blocked (disposable / temporary inboxes). */
@@ -75,6 +75,7 @@ export const ALLOWED_EMAIL_SUFFIXES = [
   "qq.com",
   "foxmail.com",
   "rediffmail.com",
+  "epatri.go"
 ];
 
 export const AUTH_EMAIL_REJECT_MESSAGE =
@@ -93,16 +94,6 @@ function domainMatchesSuffix(domain, suffix) {
   return d === s || d.endsWith(`.${s}`);
 }
 
-function isBlockedEmailDomain(domain) {
-  const d = domain.toLowerCase();
-  return BLOCKED_EMAIL_SUFFIXES.some((suffix) => domainMatchesSuffix(d, suffix));
-}
-
-function isAllowedEmailDomain(domain) {
-  const d = domain.toLowerCase();
-  return ALLOWED_EMAIL_SUFFIXES.some((suffix) => domainMatchesSuffix(d, suffix));
-}
-
 /**
  * @param {string} email - full address (will be normalized by caller)
  */
@@ -112,6 +103,6 @@ export function isAuthEmailAllowed(email) {
   if (at < 1) return false;
   const domain = s.slice(at + 1);
   if (!domain || domain.includes("..")) return false;
-  if (isBlockedEmailDomain(domain)) return false;
-  return isAllowedEmailDomain(domain);
+  if (BLOCKED_EMAIL_SUFFIXES.some((suffix) => domainMatchesSuffix(domain, suffix))) return false;
+  return ALLOWED_EMAIL_SUFFIXES.some((suffix) => domainMatchesSuffix(domain, suffix));
 }

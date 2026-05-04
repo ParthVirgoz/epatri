@@ -1,6 +1,7 @@
 import {
   registerController,
   loginController,
+  refreshController,
   meController,
   updateMeController,
   forgotPasswordController,
@@ -12,6 +13,7 @@ export async function authRoutes(fastify) {
   const authLimiter = simpleRateLimit({ scope: "auth", windowMs: 60 * 1000, max: 10 });
   fastify.post("/register", { preHandler: [authLimiter] }, registerController);
   fastify.post("/login", { preHandler: [authLimiter] }, loginController);
+  fastify.post("/refresh", { preHandler: [authLimiter] }, refreshController);
 
   fastify.get("/me", {
     preHandler: [fastify.authenticate],

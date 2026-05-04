@@ -1,4 +1,4 @@
-import confetti from "canvas-confetti";
+import { runBrandConfettiBurst } from "../../utils/brandConfetti";
 
 /** Menu-open totals in the selected Insights range — celebrate crossing these thresholds. */
 export const MENU_OPEN_MILESTONES = [
@@ -49,38 +49,5 @@ export function writeCelebratedMaxMilestone(key, celebratedMax) {
 }
 
 export function runMenuOpenMilestoneConfetti() {
-  if (
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  ) {
-    return;
-  }
-  const burst = () => {
-    confetti({
-      particleCount: 110,
-      spread: 72,
-      origin: { y: 0.68 },
-      scalar: 1.05,
-      ticks: 200,
-      colors: ["#1e9459", "#34d399", "#fbbf24", "#ffffff", "#86efac"],
-    });
-  };
-  burst();
-  setTimeout(burst, 220);
-  setTimeout(() => {
-    confetti({
-      particleCount: 60,
-      angle: 60,
-      spread: 65,
-      origin: { x: 0, y: 0.65 },
-      colors: ["#1e9459", "#a7f3d0"],
-    });
-    confetti({
-      particleCount: 60,
-      angle: 120,
-      spread: 65,
-      origin: { x: 1, y: 0.65 },
-      colors: ["#1e9459", "#a7f3d0"],
-    });
-  }, 400);
+  runBrandConfettiBurst();
 }

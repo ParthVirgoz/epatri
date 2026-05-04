@@ -116,21 +116,17 @@ function MobileDeviceFrame({ variant, children }) {
           <div className="absolute -right-[2px] top-[24%] h-[72px] w-[3px] rounded-r-sm bg-[#2f3640]" aria-hidden />
 
           <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[1.38rem] bg-[#0b0d11] ring-1 ring-white/[0.07]">
-            <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-10 bg-gradient-to-b from-[#0b0d11] via-[#0b0d11]/95 to-transparent pt-1 backdrop-blur-[2px]">
-              <div className="relative flex h-9 items-center justify-between px-4 text-[11px] font-semibold text-white/95">
-                <span>9:41</span>
-                <div className="absolute left-1/2 top-2 -translate-x-1/2">
-                  <div
-                    className="h-[11px] w-[11px] rounded-full bg-[#050608] ring-[2px] ring-[#1a1f28]"
-                    aria-hidden
-                  />
-                </div>
-                <StatusIcons className="text-white/90" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-8 bg-gradient-to-b from-white/55 to-white/25 backdrop-blur-[6px]">
+              <div className="absolute left-1/2 top-2 -translate-x-1/2">
+                <div
+                  className="h-[11px] w-[11px] rounded-full bg-[#050608] ring-[2px] ring-[#1a1f28]"
+                  aria-hidden
+                />
               </div>
             </div>
             {children}
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center bg-gradient-to-t from-[#0b0d11] via-[#0b0d11]/88 to-transparent pb-2.5 pt-8">
-              <div className="h-[5px] w-[152px] rounded-full bg-white/38" aria-hidden />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center bg-gradient-to-t from-white/55 to-white/25 backdrop-blur-[6px] py-2.5">
+              <div className="h-[5px] w-[152px] rounded-full bg-gray-500" aria-hidden />
             </div>
           </div>
         </div>
@@ -223,7 +219,7 @@ export default function MenuEditorPreview({
       className={`hide-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain ${showInteractive ? "" : "bg-white"}`}
     >
       {showPdf ? (
-        <div className="bg-[#f2f2f2] p-1.5">
+        <div className={`${showMobilePreview ? "mt-8 mb-6" : ""}`}>
           <PdfCanvasPreview phonePreview url={pdfFile ? undefined : pdfUrl} file={pdfFile || undefined} version={pdfVersion} className="" />
         </div>
       ) : pdfEmpty ? (

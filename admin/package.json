@@ -14,7 +14,7 @@
     "@supabase/supabase-js": "^2.101.0",
     "@tailwindcss/vite": "^4.2.2",
     "axios": "^1.14.0",
-    "canvas-confetti": "^1.9.4",
+    "js-confetti": "^0.13.1",
     "leaflet": "^1.9.4",
     "pdfjs-dist": "^4.10.38",
     "react": "^19.2.4",

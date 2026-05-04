@@ -1,5 +1,4 @@
 const SETTINGS_KEY = "epatri_menu_ui_settings_v1";
-const AVATAR_KEY = "epatri_profile_avatar_dataurl_v1";
 
 /**
  * Guest interactive menu: panel behind title, category headings, and item rows.
@@ -68,16 +67,4 @@ export function mergeMenuUiSettings(base, patch) {
       ...(patch?.interactiveTheme || {}),
     },
   };
-}
-
-export function getProfileAvatar() {
-  return localStorage.getItem(AVATAR_KEY) || "";
-}
-
-export function saveProfileAvatar(dataUrl) {
-  if (!dataUrl) {
-    localStorage.removeItem(AVATAR_KEY);
-    return;
-  }
-  localStorage.setItem(AVATAR_KEY, String(dataUrl));
 }

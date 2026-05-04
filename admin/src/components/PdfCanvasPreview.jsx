@@ -119,7 +119,7 @@ export default function PdfCanvasPreview({
           <p className="mt-2 text-xs text-[#8e8e8e]">If this persists, the file host may block in-app loading — try Download.</p>
         </div>
       )}
-      <div ref={wrapRef} className="relative z-0 flex min-h-[120px] flex-col items-center gap-3 px-2 py-3" />
+      <div ref={wrapRef} className="relative z-0 flex min-h-[120px] flex-col items-center" />
     </div>
   );
 }

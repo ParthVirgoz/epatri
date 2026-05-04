@@ -4,7 +4,7 @@ import {
   AUTH_EMAIL_REJECT_MESSAGE,
   STRONG_PASSWORD_REGEX,
   AUTH_PASSWORD_POLICY_MESSAGE,
-} from './auth.credentials.js';
+} from '../../../../auth.credentials.js';
 
 export const authEmailSchema = z.preprocess(
   (val) => (typeof val === 'string' ? val.trim().toLowerCase() : val),
@@ -35,6 +35,10 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({
   email: authEmailSchema,
   password: authPasswordSchema,
+});
+
+export const refreshSessionSchema = z.object({
+  refresh_token: z.string().min(1, 'refresh_token is required'),
 });
 
 export const forgotPasswordSchema = z.object({
