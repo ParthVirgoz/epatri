@@ -1,6 +1,6 @@
 /**
- * Single source for email allowlists, disposable-domain blocks, password regex, and messages.
- * Imported by `backend` (Zod) and `admin` (forms / copy). Do not copy these lists elsewhere.
+ * Email allowlists, disposable-domain blocks, password regex, and messages.
+ * Shared by the API (Zod) and the admin app (Vite); keep deploy bundles importing from `backend/src` only.
  */
 
 /** Domains and subdomains blocked (disposable / temporary inboxes). */
@@ -75,7 +75,7 @@ export const ALLOWED_EMAIL_SUFFIXES = [
   "qq.com",
   "foxmail.com",
   "rediffmail.com",
-  "epatri.go"
+  "epatri.go",
 ];
 
 export const AUTH_EMAIL_REJECT_MESSAGE =

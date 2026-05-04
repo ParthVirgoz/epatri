@@ -4,7 +4,7 @@ import {
   AUTH_EMAIL_REJECT_MESSAGE,
   STRONG_PASSWORD_REGEX,
   AUTH_PASSWORD_POLICY_MESSAGE,
-} from '../../../../auth.credentials.js';
+} from '../../auth.credentials.js';
 
 export const authEmailSchema = z.preprocess(
   (val) => (typeof val === 'string' ? val.trim().toLowerCase() : val),

@@ -5,7 +5,7 @@
 import {
   AUTH_EMAIL_REJECT_MESSAGE,
   AUTH_PASSWORD_POLICY_MESSAGE,
-} from "../../../auth.credentials.js";
+} from "../../../backend/src/auth.credentials.js";
 
 /** -------- Success (toasts) -------- */
 export const MSG_SUCCESS_LOGIN = "You're in. Welcome back.";
@@ -16,7 +16,7 @@ export const MSG_SUCCESS_REGISTER =
 export const FORM = {
   emailRequired: "Please enter your email address.",
   emailLooksInvalid: "That doesn’t look like a valid email address.",
-  /** Same text as server policy — defined once in auth.credentials.js */
+  /** Same text as server policy — defined once in backend/src/auth.credentials.js */
   emailProviderNotAllowed: AUTH_EMAIL_REJECT_MESSAGE,
   passwordRequired: "Please enter your password.",
   passwordRules: AUTH_PASSWORD_POLICY_MESSAGE,

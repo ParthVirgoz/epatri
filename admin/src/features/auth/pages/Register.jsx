@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import {
   isAuthEmailAllowed,
   STRONG_PASSWORD_REGEX,
-} from "../../../../../auth.credentials.js";
+} from "../../../../../backend/src/auth.credentials.js";
 import {
   FORM,
   firstFormErrorMessage,
