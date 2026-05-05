@@ -15,6 +15,7 @@ import { mergeMenuUiSettings, getMenuUiSettings } from "../menuUiSettings";
 import { MAX_PDF_UPLOAD_BYTES } from "../menuConstants";
 import { getPublicMenuUrl } from "../../../utils/menuPublicUrl";
 import { runBrandConfettiBurst } from "../../../utils/brandConfetti";
+import MenuStudioSkeleton from "../../../shared/components/skeletons/MenuStudioSkeleton";
 
 function validatePickedPdf(file) {
   if (file.type !== "application/pdf") {
@@ -62,6 +63,7 @@ export default function MenuStudioMvp() {
   const user = useAuthStore((s) => s.user);
   const pdfInputRef = useRef(null);
   const [s, setS] = useState(null);
+  const [studioReady, setStudioReady] = useState(false);
   /** Last server-aligned editor snapshot; `null` = no published/draft row yet. */
   const [baseline, setBaseline] = useState(null);
   const [mode, setMode] = useState("pdf");
@@ -87,21 +89,25 @@ export default function MenuStudioMvp() {
   );
 
   const load = async () => {
-    const [data, err] = await getMyMenuStudioApi();
-    if (err) {
-      toast.error(err || "Failed to load menu studio.");
-      return;
+    try {
+      const [data, err] = await getMyMenuStudioApi();
+      if (err) {
+        toast.error(err || "Failed to load menu studio.");
+        return;
+      }
+      setS(data);
+      setBaseline(baselineFromStudioResponse(data));
+      const src = data?.draft || data?.published;
+      if (!src) return;
+      setMode(src.menu_type || "pdf");
+      setPdfUrl(src.pdf_url || "");
+      setDigitalObj(
+        src.digital_menu && typeof src.digital_menu === "object" ? src.digital_menu : { categories: [] },
+      );
+      setPdfFile(null);
+    } finally {
+      setStudioReady(true);
     }
-    setS(data);
-    setBaseline(baselineFromStudioResponse(data));
-    const src = data?.draft || data?.published;
-    if (!src) return;
-    setMode(src.menu_type || "pdf");
-    setPdfUrl(src.pdf_url || "");
-    setDigitalObj(
-      src.digital_menu && typeof src.digital_menu === "object" ? src.digital_menu : { categories: [] },
-    );
-    setPdfFile(null);
   };
 
   useEffect(() => {
@@ -241,6 +247,10 @@ export default function MenuStudioMvp() {
     });
     return `Last published: ${formatted}`;
   }, [s?.last_published_at]);
+
+  if (!studioReady) {
+    return <MenuStudioSkeleton />;
+  }
 
   return (
     <div className="h-[calc(100dvh-var(--nav-h)-var(--bottom-nav-h))] max-h-[calc(100dvh-var(--nav-h)-var(--bottom-nav-h))] w-full md:grid md:grid-cols-2 lg:grid-cols-5 xl:grid-cols-3 md:overflow-hidden">

@@ -71,3 +71,47 @@ body {
   width: 0;
   height: 0;
 }
+
+/* Auth / insights loading — subtle motion (respect reduced motion). */
+@keyframes ep-loading-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ep-loading-fade-in {
+  animation: ep-loading-fade-in 0.45s ease-out forwards;
+}
+
+@keyframes ep-skeleton-shimmer {
+  0% {
+    background-position: -120% 0;
+  }
+  100% {
+    background-position: 120% 0;
+  }
+}
+
+.ep-skeleton-shine {
+  background: linear-gradient(100deg, #e5e5e3 0%, #ececea 38%, #f6f6f4 50%, #ececea 62%, #e5e5e3 100%);
+  background-size: 220% 100%;
+  animation: ep-skeleton-shimmer 1.35s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ep-loading-fade-in {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .ep-skeleton-shine {
+    animation: none;
+    background: #e8e8e6;
+  }
+}

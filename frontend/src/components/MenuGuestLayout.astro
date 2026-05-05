@@ -1,6 +1,14 @@
 ---
 import "../styles/global.css";
 import BrandMark from "./BrandMark.astro";
+import SeoHead from "./SeoHead.astro";
+import {
+  canonicalHref,
+  guestMenuMetaDescription,
+  menuWebPageJsonLd,
+  siteOrigin,
+  truncateMetaDescription,
+} from "../core/siteSeo";
 
 type GuestMenuFormat = "auto" | "pdf" | "interactive";
 
@@ -40,6 +48,8 @@ interface Props {
   createMenuCtaUrl?: string;
   /** Override customer marketing home link (defaults to this page’s origin) */
   marketingSiteUrl?: string;
+  /** SEO description override */
+  metaDescription?: string;
 }
 
 const {
@@ -57,9 +67,23 @@ const {
   interactiveTheme = null,
   createMenuCtaUrl: createMenuCtaUrlProp,
   marketingSiteUrl: marketingSiteUrlProp,
+  metaDescription: metaDescriptionProp,
 } = Astro.props;
 
-const envCta = String(import.meta.env.PUBLIC_CREATE_MENU_CTA_URL || "").trim();
+const env = (import.meta as unknown as { env: Record<string, string | undefined> }).env;
+const origin = siteOrigin(Astro.url, env.PUBLIC_SITE_URL);
+const canonical = canonicalHref(Astro.url, env.PUBLIC_SITE_URL);
+const resolvedMetaDescription = truncateMetaDescription(
+  metaDescriptionProp?.trim() ? metaDescriptionProp.trim() : guestMenuMetaDescription(shopDisplayName),
+);
+const menuLd = menuWebPageJsonLd({
+  origin,
+  canonical,
+  pageName: shopDisplayName,
+  description: resolvedMetaDescription,
+});
+
+const envCta = String(env.PUBLIC_CREATE_MENU_CTA_URL || "").trim();
 const resolvedCreateMenuUrl =
   (createMenuCtaUrlProp && String(createMenuCtaUrlProp).trim()) ||
   envCta ||
@@ -67,10 +91,10 @@ const resolvedCreateMenuUrl =
 const resolvedMarketingHome =
   (marketingSiteUrlProp && String(marketingSiteUrlProp).trim()) || new URL("/", Astro.url).href;
 
-const socialInstagram = String(import.meta.env.PUBLIC_SOCIAL_INSTAGRAM || "").trim();
-const socialX = String(import.meta.env.PUBLIC_SOCIAL_X || "").trim();
-const socialGithub = String(import.meta.env.PUBLIC_SOCIAL_GITHUB || "").trim();
-const socialLinkedin = String(import.meta.env.PUBLIC_SOCIAL_LINKEDIN || "").trim();
+const socialInstagram = String(env.PUBLIC_SOCIAL_INSTAGRAM || "").trim();
+const socialX = String(env.PUBLIC_SOCIAL_X || "").trim();
+const socialGithub = String(env.PUBLIC_SOCIAL_GITHUB || "").trim();
+const socialLinkedin = String(env.PUBLIC_SOCIAL_LINKEDIN || "").trim();
 const hasSocialRow = Boolean(socialInstagram || socialX || socialGithub || socialLinkedin);
 
 const dm = interactiveTheme && typeof interactiveTheme === "object" ? interactiveTheme : {};
@@ -125,6 +149,13 @@ const showDigitalPanel = selectedMode === "interactive";
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <SeoHead
+      title={title}
+      description={resolvedMetaDescription}
+      jsonLd={menuLd}
+      ogType="article"
+    />
     {
       showDigitalPanel ? (
         <>

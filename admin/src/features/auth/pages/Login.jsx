@@ -44,24 +44,25 @@ export default function Login() {
 
     const onValidSubmit = async (formData) => {
         setLoading(true);
+        try {
+            const payload = {
+                email: formData.email.trim(),
+                password: formData.password,
+            };
 
-        const payload = {
-            email: formData.email.trim(),
-            password: formData.password,
-        };
+            const [data, error] = await loginApi(payload);
+            if (error) {
+                toast.error(error);
+                return;
+            }
 
-        const [data, error] = await loginApi(payload);
-        setLoading(false);
-
-        if (error) {
-            toast.error(error);
-            return;
+            login(data);
+            await refreshUser();
+            toast.success(MSG_SUCCESS_LOGIN);
+            navigate("/", { replace: true });
+        } finally {
+            setLoading(false);
         }
-
-        login(data);
-        await refreshUser();
-        toast.success(MSG_SUCCESS_LOGIN);
-        navigate("/", { replace: true });
     };
 
     const onInvalidSubmit = (fieldErrors) => {
@@ -191,7 +192,7 @@ export default function Login() {
                             {loading ? (
                                 <>
                                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden />
-                                    Logging in, please wait…
+                                    Signing you in…
                                 </>
                             ) : (
                                 "Log in"

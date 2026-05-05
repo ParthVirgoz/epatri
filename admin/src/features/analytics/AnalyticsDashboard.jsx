@@ -9,6 +9,7 @@ import {
   runMenuOpenMilestoneConfetti,
   writeCelebratedMaxMilestone,
 } from "./insightCelebration";
+import InsightsDashboardSkeleton from "./InsightsDashboardSkeleton";
 
 const OpensByDayChart = lazy(() => import("./OpensByDayChart"));
 
@@ -318,7 +319,7 @@ export default function AnalyticsDashboard() {
   }, [loading, error, analytics, user?.business_slug, viewMode, insightLocationId, activePreset, dateRange]);
 
   if (loading && !analytics) {
-    return <div className="flex min-h-[40vh] items-center justify-center text-sm text-[#8e8e8e]">Loading…</div>;
+    return <InsightsDashboardSkeleton />;
   }
   if (error && !analytics) {
     return <div className="rounded border border-[#ffccc7] bg-[#fff2f0] px-4 py-3 text-sm text-[#cf1322]">{error}</div>;
@@ -446,7 +447,11 @@ export default function AnalyticsDashboard() {
             </div>
             {!isTodayOnly ? (
               <div className="bg-[#fafafa]/80 px-2 pb-3 pt-2 sm:px-3">
-                <Suspense fallback={<div className="h-[200px] animate-pulse rounded-md bg-[#ececec] sm:h-[220px]" />}>
+                <Suspense
+                  fallback={
+                    <div className="h-[200px] overflow-hidden rounded-lg ep-skeleton-shine sm:h-[220px]" aria-hidden />
+                  }
+                >
                   <OpensByDayChart points={opensByDayPoints} />
                 </Suspense>
               </div>

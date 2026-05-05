@@ -12,6 +12,7 @@ import {
   INTERACTIVE_MENU_PANEL_BG,
   INTERACTIVE_THEME_DEFAULTS,
 } from "../../menu/menuUiSettings";
+import ProfilePageSkeleton from "../../../shared/components/skeletons/ProfilePageSkeleton";
 
 export default function Profile() {
   const user = useAuthStore((s) => s.user);
@@ -243,6 +244,10 @@ export default function Profile() {
 
   const themeRow =
     "flex min-h-[3rem] items-center justify-between gap-4 rounded-xl border border-neutral-100 bg-neutral-50/60 px-4 py-3";
+
+  if (!user) {
+    return <ProfilePageSkeleton />;
+  }
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-4 px-4 py-8 sm:px-6">

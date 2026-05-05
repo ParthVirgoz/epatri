@@ -1,13 +1,30 @@
 ---
+import SeoHead from "../components/SeoHead.astro";
+import {
+	collectSameAsFromEnv,
+	DEFAULT_HOME_DESCRIPTION,
+	DEFAULT_HOME_TITLE,
+	HOME_META_KEYWORDS,
+	homeJsonLdGraph,
+	siteOrigin,
+} from "../core/siteSeo";
+
 interface Props {
 	title?: string;
 	description?: string;
+	keywords?: string;
 }
 
 const {
-	title = "ePatri — Digital menus, lighter footprint",
-	description = "ePatri helps restaurants share e-menus from one link. Fewer paper menus, clearer choices for guests and the planet.",
+	title = DEFAULT_HOME_TITLE,
+	description = DEFAULT_HOME_DESCRIPTION,
+	keywords = HOME_META_KEYWORDS,
 } = Astro.props;
+
+const env = (import.meta as unknown as { env: Record<string, string | undefined> }).env;
+const origin = siteOrigin(Astro.url, env.PUBLIC_SITE_URL);
+const sameAs = collectSameAsFromEnv(env);
+const homeLd = homeJsonLdGraph(origin, sameAs);
 ---
 
 <!doctype html>
@@ -15,7 +32,7 @@ const {
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta name="description" content={description} />
+		<SeoHead title={title} description={description} keywords={keywords} jsonLd={homeLd} />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

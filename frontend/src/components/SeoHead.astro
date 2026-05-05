@@ -1,0 +1,64 @@
+---
+import { canonicalHref, siteOrigin, truncateMetaDescription } from "../core/siteSeo";
+
+interface Props {
+  title: string;
+  description: string;
+  /** Comma-separated keywords; optional */
+  keywords?: string;
+  /** Override canonical (full URL). Default: current path on site origin. */
+  canonicalUrl?: string;
+  robots?: string;
+  ogType?: "website" | "article";
+  twitterCard?: "summary" | "summary_large_image";
+  /** Absolute image URL for og:image / twitter:image */
+  ogImageUrl?: string;
+  /** Single JSON-LD object (may include @graph) */
+  jsonLd?: Record<string, unknown> | null;
+}
+
+const {
+  title,
+  description,
+  keywords,
+  canonicalUrl: canonicalOverride,
+  robots = "index, follow",
+  ogType = "website",
+  twitterCard = "summary",
+  ogImageUrl: ogImageProp,
+  jsonLd = null,
+} = Astro.props;
+
+const env = (import.meta as unknown as { env: Record<string, string | undefined> }).env;
+const publicSite = typeof env.PUBLIC_SITE_URL === "string" ? env.PUBLIC_SITE_URL : "";
+const origin = siteOrigin(Astro.url, publicSite);
+const canonical = canonicalOverride || canonicalHref(Astro.url, publicSite);
+const desc = truncateMetaDescription(description);
+const envOg = String(env.PUBLIC_DEFAULT_OG_IMAGE || "").trim();
+const ogImage = ogImageProp || envOg || `${origin}/favicon.svg`;
+const hasDedicatedOgImage = Boolean(ogImageProp || envOg);
+const resolvedTwitterCard = hasDedicatedOgImage ? "summary_large_image" : twitterCard;
+
+const jsonStr = jsonLd ? JSON.stringify(jsonLd).replace(/</g, "\\u003c") : "";
+---
+
+<link rel="canonical" href={canonical} />
+<meta name="description" content={desc} />
+{keywords ? <meta name="keywords" content={keywords} /> : null}
+<meta name="robots" content={robots} />
+<meta name="theme-color" content="#121316" />
+
+<meta property="og:site_name" content="ePatri" />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={desc} />
+<meta property="og:url" content={canonical} />
+<meta property="og:type" content={ogType} />
+<meta property="og:locale" content="en_US" />
+<meta property="og:image" content={ogImage} />
+
+<meta name="twitter:card" content={resolvedTwitterCard} />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={desc} />
+<meta name="twitter:image" content={ogImage} />
+
+{jsonStr ? <script type="application/ld+json" set:html={jsonStr} /> : null}

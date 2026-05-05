@@ -1,0 +1,6 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Add your sitemap when you enable one (e.g. @astrojs/sitemap with `site` in astro.config):
+# Sitemap: https://epatri.vercel.app/sitemap-index.xml

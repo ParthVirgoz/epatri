@@ -1,5 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuthStore } from "../features/auth/auth.store";
+import FullScreenLoading from "../shared/components/FullScreenLoading";
 
 /** `/` → `/app/menu` if signed in, else `/welcome` (after auth finishes loading). */
 export default function HomeRedirect() {
@@ -8,11 +9,7 @@ export default function HomeRedirect() {
   const user = useAuthStore((s) => s.user);
 
   if (loading) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-[var(--app-bg)] text-sm text-[#8e8e8e]">
-        Loading…
-      </div>
-    );
+    return <FullScreenLoading message="Checking your session…" />;
   }
 
   if (isAuthenticated) {

@@ -1,9 +1,18 @@
 ---
 import "../styles/global.css";
-import BrandMark from "../components/BrandMark.astro";
+import SeoHead from "../components/SeoHead.astro";
+import {
+  SITE_BRAND,
+  canonicalHref,
+  guestMenuMetaDescription,
+  menuWebPageJsonLd,
+  siteOrigin,
+} from "../core/siteSeo";
 export const prerender = false;
 
 const { shop } = Astro.params;
+
+const env = (import.meta as unknown as { env: Record<string, string | undefined> & { MODE: string } }).env;
 
 // Debug: log what shop was accessed
 // console.log("🖥️ [Server] Page accessed for shop:", shop);
@@ -13,10 +22,8 @@ let error = null as string | null;
 
 // Prefer explicit env variable (Astro/Vite) first.
 const apiBaseUrl =
-  import.meta.env.PUBLIC_API_URL ||
-  (import.meta.env.MODE === 'production'
-    ? 'https://epatri-be.vercel.app/api/v1'
-    : 'http://localhost:5000/api/v1');
+  env.PUBLIC_API_URL ||
+  (env.MODE === "production" ? "https://epatri-be.vercel.app/api/v1" : "http://localhost:5000/api/v1");
 
 try {
   // Keep legacy UI/JS as-is; only adapt data source to current public API contract.
@@ -48,17 +55,41 @@ try {
   error = err instanceof Error ? err.message : String(err);
 }
 
-const partnerSignupBase = String(import.meta.env.PUBLIC_PARTNER_SIGNUP_URL || "").replace(/\/$/, "");
+const partnerSignupBase = String(env.PUBLIC_PARTNER_SIGNUP_URL || "").replace(/\/$/, "");
 const shopGuestFooterCta =
-  String(import.meta.env.PUBLIC_CREATE_MENU_CTA_URL || "").trim() ||
+  String(env.PUBLIC_CREATE_MENU_CTA_URL || "").trim() ||
   (partnerSignupBase ? `${partnerSignupBase}/register` : new URL("/", Astro.url).href);
 const shopGuestFooterHome = new URL("/", Astro.url).href;
 
-const socialInstagram = String(import.meta.env.PUBLIC_SOCIAL_INSTAGRAM || "").trim();
-const socialX = String(import.meta.env.PUBLIC_SOCIAL_X || "").trim();
-const socialGithub = String(import.meta.env.PUBLIC_SOCIAL_GITHUB || "").trim();
-const socialLinkedin = String(import.meta.env.PUBLIC_SOCIAL_LINKEDIN || "").trim();
+const socialInstagram = String(env.PUBLIC_SOCIAL_INSTAGRAM || "").trim();
+const socialX = String(env.PUBLIC_SOCIAL_X || "").trim();
+const socialGithub = String(env.PUBLIC_SOCIAL_GITHUB || "").trim();
+const socialLinkedin = String(env.PUBLIC_SOCIAL_LINKEDIN || "").trim();
 const shopHasSocialRow = Boolean(socialInstagram || socialX || socialGithub || socialLinkedin);
+
+const publicSite = typeof env.PUBLIC_SITE_URL === "string" ? env.PUBLIC_SITE_URL : "";
+const origin = siteOrigin(Astro.url, publicSite);
+const canonical = canonicalHref(Astro.url, publicSite);
+const seoTitle =
+  data && !error
+    ? `${data.shop_name} | Digital menu — ${SITE_BRAND}`
+    : error
+      ? `Menu unavailable | ${SITE_BRAND}`
+      : `Guest menu | ${SITE_BRAND}`;
+const seoDesc =
+  data && !error
+    ? guestMenuMetaDescription(String(data.shop_name))
+    : "This guest menu could not be loaded. It may have moved or is temporarily unavailable.";
+const seoRobots = data && !error ? "index, follow" : "noindex, follow";
+const seoLd =
+  data && !error
+    ? menuWebPageJsonLd({
+        origin,
+        canonical,
+        pageName: String(data.shop_name),
+        description: guestMenuMetaDescription(String(data.shop_name)),
+      })
+    : null;
 ---
 
 <!doctype html>
@@ -67,6 +98,7 @@ const shopHasSocialRow = Boolean(socialInstagram || socialX || socialGithub || s
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{data?.shop_name || "Menu"}</title>
+    <SeoHead title={seoTitle} description={seoDesc} robots={seoRobots} jsonLd={seoLd} ogType="article" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

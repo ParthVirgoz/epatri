@@ -9,6 +9,10 @@ import {
   ensureSessionDeadlineIfMissing,
   ACCESS_TOKEN_KEY,
 } from "./auth.storage";
+
+/** Bumps on login/logout so in-flight `initAuth` cannot clear a newer session or leave `loading` stuck. */
+let authHydrationEpoch = 0;
+
 export const useAuthStore = create((set) => ({
   user: null,
   token: typeof localStorage !== "undefined" ? localStorage.getItem(ACCESS_TOKEN_KEY) : null,
@@ -16,19 +20,22 @@ export const useAuthStore = create((set) => ({
   loading: true,
 
   initAuth: async () => {
+    const myEpoch = ++authHydrationEpoch;
     const token = getAccessToken();
 
     if (!token) {
-      set({ loading: false });
+      if (myEpoch === authHydrationEpoch) set({ loading: false });
       return;
     }
     if (isAdminSessionExpired()) {
+      if (myEpoch !== authHydrationEpoch) return;
       clearAuthStorage();
       set({ user: null, token: null, isAuthenticated: false, loading: false });
       return;
     }
 
     const applyUser = (userData, activeToken) => {
+      if (myEpoch !== authHydrationEpoch) return;
       ensureSessionDeadlineIfMissing();
       set({
         user: userData,
@@ -42,6 +49,7 @@ export const useAuthStore = create((set) => ({
       const { data } = await apiClient.get("/auth/me");
       applyUser(data, getAccessToken());
     } catch (error) {
+      if (myEpoch !== authHydrationEpoch) return;
       const status = Number(error?.response?.status || 0);
       if (status === 401 || status === 403) {
         clearAuthStorage();
@@ -53,6 +61,7 @@ export const useAuthStore = create((set) => ({
   },
 
   login: (data) => {
+    authHydrationEpoch += 1;
     persistSessionFromLogin({
       access_token: data.access_token,
       refresh_token: data.refresh_token,
@@ -62,6 +71,7 @@ export const useAuthStore = create((set) => ({
       user: data.user,
       token: data.access_token,
       isAuthenticated: true,
+      loading: false,
     });
   },
 
@@ -82,12 +92,14 @@ export const useAuthStore = create((set) => ({
   },
 
   logout: () => {
+    authHydrationEpoch += 1;
     clearAuthStorage();
 
     set({
       user: null,
       token: null,
       isAuthenticated: false,
+      loading: false,
     });
   },
 }));

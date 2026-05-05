@@ -1,15 +1,18 @@
 ---
 import MenuGuestLayout from "../../components/MenuGuestLayout.astro";
+import SeoHead from "../../components/SeoHead.astro";
+import { SITE_BRAND, truncateMetaDescription } from "../../core/siteSeo";
 
 export const prerender = false;
 
 const { business, location } = Astro.params;
 
+const env = (import.meta as unknown as { env: Record<string, string | undefined> & { MODE: string } }).env;
 const apiBaseUrl =
-  import.meta.env.PUBLIC_API_URL ||
-  (import.meta.env.MODE === "production" ? "https://epatri-be.vercel.app/api/v1" : "http://localhost:5000/api/v1");
+  env.PUBLIC_API_URL ||
+  (env.MODE === "production" ? "https://epatri-be.vercel.app/api/v1" : "http://localhost:5000/api/v1");
 
-const partnerAdminBase = import.meta.env.PUBLIC_PARTNER_SIGNUP_URL?.replace(/\/$/, "") || "";
+const partnerAdminBase = env.PUBLIC_PARTNER_SIGNUP_URL?.replace(/\/$/, "") || "";
 
 const pageUrl = Astro.url.href;
 
@@ -66,6 +69,16 @@ const directionsUrl = (() => {
   if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${a},${b}`)}`;
 })();
+
+const errDesc = truncateMetaDescription(
+  fetchError || "This ePatri outlet link could not be found or is no longer available.",
+);
+const pendingDesc =
+  payload && loc
+    ? truncateMetaDescription(
+        `${payload.business_name} — ${loc.name}: menu not live yet on ${SITE_BRAND}. Share this page or ask the owner to publish.`,
+      )
+    : errDesc;
 ---
 
 {
@@ -74,7 +87,9 @@ const directionsUrl = (() => {
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Menu | ePatri</title>
+        <title>Outlet not found | {SITE_BRAND}</title>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <SeoHead title={`Outlet not found | ${SITE_BRAND}`} description={errDesc} robots="noindex, follow" jsonLd={null} />
       </head>
       <body style="margin:0;font-family:system-ui;background:#f7faf8;color:#262626">
         <main style="max-width:480px;margin:48px auto;padding:24px;text-align:center">
@@ -95,7 +110,14 @@ const directionsUrl = (() => {
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{payload.business_name} — {loc.name} | ePatri</title>
+        <title>{payload.business_name} — {loc.name} | {SITE_BRAND}</title>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <SeoHead
+          title={`${payload.business_name} — ${loc.name} | ${SITE_BRAND}`}
+          description={pendingDesc}
+          robots="index, follow"
+          jsonLd={null}
+        />
       </head>
       <body style="margin:0;font-family:system-ui;background:#f7faf8;color:#262626">
         <main style="max-width:520px;margin:40px auto;padding:24px 20px 48px">
@@ -212,7 +234,14 @@ const directionsUrl = (() => {
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Menu | ePatri</title>
+        <title>Could not load menu | {SITE_BRAND}</title>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <SeoHead
+          title={`Could not load menu | ${SITE_BRAND}`}
+          description={errDesc}
+          robots="noindex, follow"
+          jsonLd={null}
+        />
       </head>
       <body style="margin:0;font-family:system-ui;background:#f7faf8;color:#262626">
         <main style="max-width:480px;margin:48px auto;padding:24px;text-align:center">

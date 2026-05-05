@@ -109,8 +109,14 @@ export default function PdfCanvasPreview({
       style={phonePreview ? undefined : { maxHeight: "min(82vh, 780px)" }}
     >
       {status === "loading" && (
-        <div className="absolute inset-0 z-10 flex min-h-[220px] items-center justify-center bg-[#2a2a2a]/95 text-sm text-[#a8a8a8]">
-          Loading preview…
+        <div
+          className="absolute inset-0 z-10 flex min-h-[220px] flex-col items-center justify-center gap-3 bg-[#2a2a2a]/95 px-6"
+          aria-busy="true"
+          aria-label="Loading preview"
+        >
+          <div className="h-10 w-10 shrink-0 rounded-full border-2 border-white/15 border-t-white/70 motion-safe:animate-spin motion-reduce:animate-none" />
+          <div className="h-3 w-36 max-w-[80%] rounded ep-skeleton-shine opacity-80" />
+          <p className="text-xs text-[#8e8e8e]">Rendering PDF…</p>
         </div>
       )}
       {error && (
