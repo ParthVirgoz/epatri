@@ -2,7 +2,7 @@
 
 export const SITE_BRAND = "ePatri";
 
-export const DEFAULT_HOME_TITLE = `${SITE_BRAND} — Digital menus, lighter footprint`;
+export const DEFAULT_HOME_TITLE = `${SITE_BRAND} | QR Digital Menu for Restaurants, Cafes and Food Businesses`;
 
 export const DEFAULT_HOME_DESCRIPTION =
   "ePatri helps restaurants publish QR-ready digital menus and PDF menus from one link — fewer printed menus, clearer choices for guests, and a lighter footprint.";

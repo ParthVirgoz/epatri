@@ -1,0 +1,141 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { allSeoLandingPages } from "../../core/seoLandingPages";
+
+const pages = allSeoLandingPages();
+---
+
+<Layout
+  title="Restaurant Menu Solutions | ePatri"
+  description="Explore ePatri solutions for restaurant menus, QR menus, paperless menu systems, and interactive guest menu experiences."
+>
+  <main class="solutions-wrap">
+    <section class="hero">
+      <p class="hero__eyebrow">ePatri Solutions</p>
+      <h1>Pick one. Ship today.</h1>
+      <p class="hero__lead">
+        Focused landing pages for real restaurant and cafe workflows. Choose the route that matches your system and launch with clarity.
+      </p>
+    </section>
+    <section class="quick-value">
+      <p>What you get: one menu link, faster updates, cleaner guest experience.</p>
+    </section>
+    <ul class="cards">
+      {pages.map((page) => (
+        <li class="card">
+          <a href={`/solutions/${page.slug}/`} class="card__title">{page.heading}</a>
+          <p class="card__step">{page.steps[0]}</p>
+          <a href={`/solutions/${page.slug}/`} class="card__cta">{page.ctaLabel}</a>
+        </li>
+      ))}
+    </ul>
+  </main>
+</Layout>
+
+<style>
+  :root {
+    --bg: #f7f6f2;
+    --panel: #ffffff;
+    --text: #171717;
+    --muted: #666666;
+    --line: #dfddd6;
+    --accent: #4f7a67;
+  }
+  .solutions-wrap {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 96px 28px 128px;
+    background: var(--bg);
+    color: var(--text);
+    display: grid;
+    gap: 40px;
+  }
+  .hero {
+    margin: 0;
+    display: grid;
+    gap: 12px;
+  }
+  .hero__eyebrow {
+    margin: 0;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .hero h1 {
+    margin: 0;
+    font-size: clamp(40px, 7vw, 74px);
+    line-height: 1;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  .hero__lead {
+    margin: 0;
+    max-width: 62ch;
+    color: var(--muted);
+    line-height: 1.75;
+    font-size: 16px;
+  }
+  .quick-value {
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 16px 0;
+    margin: 0;
+  }
+  .quick-value p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.75;
+  }
+  .cards {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 24px;
+    background: var(--panel);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    display: grid;
+    gap: 12px;
+  }
+  .card__title {
+    display: inline-block;
+    margin: 0;
+    color: var(--text);
+    text-decoration: none;
+    font-size: clamp(24px, 3.4vw, 32px);
+    line-height: 1.12;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+  }
+  .card__step {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.75;
+    max-width: 58ch;
+    font-size: 16px;
+  }
+  .card__cta {
+    display: inline-block;
+    text-decoration: none;
+    font-weight: 560;
+    color: var(--accent);
+    border-bottom: 1px solid #b2c8bb;
+    padding: 0 0 1px;
+    background: transparent;
+    justify-self: start;
+  }
+  @media (max-width: 860px) {
+    .solutions-wrap { padding: 56px 18px 82px; gap: 28px; }
+    .cards { grid-template-columns: 1fr; }
+    .card { padding: 18px; }
+  }
+</style>
