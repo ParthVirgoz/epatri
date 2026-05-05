@@ -584,6 +584,18 @@ const seoLd =
         padding-right: 15px;
         line-height: 1.4;
       }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
     </style>
   </head>
 
@@ -607,7 +619,15 @@ const seoLd =
       </div>
     </div>
 
-    <div id="app-root"></div>
+    <main aria-label="Guest menu">
+      <h1 class="sr-only">{data?.shop_name || "Guest menu"}</h1>
+      <p class="sr-only">
+        {data?.shop_name
+          ? `${data.shop_name} digital guest menu. PDF pages are rendered below and can be zoomed.`
+          : "Digital guest menu page."}
+      </p>
+      <div id="app-root"></div>
+    </main>
 
     <script
       define:vars={{
@@ -637,13 +657,12 @@ const seoLd =
         analyticsMenuId,
         apiBaseUrl,
       };
-      console.log("🌐 [Tracker] initial API base URL", apiBaseUrl);
-
       // Inline Analytics Tracker
       class AnalyticsTrackerInline {
         constructor(apiBaseUrl = null) {
           this.apiBaseUrl = apiBaseUrl || this.getApiBaseUrl();
           this.sessionId = this.generateSessionId();
+          this.geoSessionKey = "analyticsGeoLocation";
         }
 
         generateSessionId() {
@@ -653,27 +672,15 @@ const seoLd =
         getApiBaseUrl() {
           // 1) server-provided (Astro define:vars)
           if (this.apiBaseUrl) {
-            console.log(
-              "🌐 [Tracker] getApiBaseUrl: from this.apiBaseUrl",
-              this.apiBaseUrl,
-            );
             return this.apiBaseUrl;
           }
 
           // 2) explicit env workaround
           if (window.__MENU_DATA__?.apiBaseUrl) {
-            console.log(
-              "🌐 [Tracker] getApiBaseUrl: from MENU_DATA",
-              window.__MENU_DATA__.apiBaseUrl,
-            );
             return window.__MENU_DATA__.apiBaseUrl;
           }
 
           const hostname = window.location.hostname;
-          console.log(
-            "🌐 [Tracker] getApiBaseUrl: hostname fallback",
-            hostname,
-          );
 
           // 3) production explicit
           if (hostname.includes("epatri.vercel.app")) {
@@ -725,36 +732,85 @@ const seoLd =
 
         async getGeolocationData() {
           return new Promise((resolve) => {
-            if (navigator.geolocation) {
-              navigator.geolocation.getCurrentPosition(
-                (position) => {
-                  resolve({
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
-                  });
-                },
-                () => {
-                  resolve({ latitude: null, longitude: null });
-                }
-              );
-            } else {
+            if (!navigator.geolocation) {
               resolve({ latitude: null, longitude: null });
+              return;
             }
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                resolve({
+                  latitude: position.coords.latitude,
+                  longitude: position.coords.longitude,
+                });
+              },
+              () => {
+                resolve({ latitude: null, longitude: null });
+              },
+              {
+                enableHighAccuracy: false,
+                timeout: 4500,
+                maximumAge: 10 * 60 * 1000,
+              },
+            );
           });
         }
 
-        async trackMenuView(shopUsername) {
+        getCachedGeoData() {
           try {
-            console.log("📡 [Tracker] Starting track for:", shopUsername);
+            const raw = sessionStorage.getItem(this.geoSessionKey);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (
+              parsed &&
+              typeof parsed.latitude === "number" &&
+              typeof parsed.longitude === "number"
+            ) {
+              return { latitude: parsed.latitude, longitude: parsed.longitude };
+            }
+          } catch {}
+          return null;
+        }
 
+        cacheGeoData(geoData) {
+          try {
+            if (
+              geoData &&
+              typeof geoData.latitude === "number" &&
+              typeof geoData.longitude === "number"
+            ) {
+              sessionStorage.setItem(this.geoSessionKey, JSON.stringify(geoData));
+            }
+          } catch {}
+        }
+
+        async postTrack(shopUsername, payload) {
+          try {
+            const endpoint = `${this.apiBaseUrl}/analytics/shop/${shopUsername}/track`;
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+              },
+              body: JSON.stringify(payload),
+            });
+            if (!response.ok) {
+              await response.text();
+              return null;
+            }
+            return await response.json();
+          } catch {
+            return null;
+          }
+        }
+
+        async trackMenuView(shopUsername, geoOverride = null) {
+          try {
             const deviceInfo = this.getDeviceInfo();
-            console.log("📱 [Tracker] Device info:", deviceInfo);
 
             const locData = await this.getIpLocationData();
-            console.log("🌍 [Tracker] Location:", locData);
 
-            const geoData = await this.getGeolocationData();
-            console.log("📍 [Tracker] Geo:", geoData);
+            const geoData = geoOverride || { latitude: null, longitude: null };
 
             const payload = {
               ...deviceInfo,
@@ -765,33 +821,8 @@ const seoLd =
               menu_id: window.__MENU_DATA__?.analyticsMenuId || null,
               event_type: "view",
             };
-
-            const endpoint = `${this.apiBaseUrl}/analytics/shop/${shopUsername}/track`;
-            console.log("📡 [Tracker] Sending to:", endpoint);
-
-            const response = await fetch(endpoint, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-              },
-              body: JSON.stringify(payload),
-              // no need for extra mode; default is cors for cross-origin
-            });
-
-            console.log("📊 [Tracker] Response:", response.status);
-
-            if (!response.ok) {
-              const errorText = await response.text();
-              console.error("❌ [Tracker] Error:", response.status, errorText);
-              return null;
-            }
-
-            const result = await response.json();
-            console.log("✅ [Tracker] Success!");
-            return result;
-          } catch (err) {
-            console.error("❌ [Tracker] Exception:", err.message);
+            return await this.postTrack(shopUsername, payload);
+          } catch {
             return null;
           }
         }
@@ -814,55 +845,76 @@ const seoLd =
       // Initialize analytics tracking
       async function initializeAnalytics() {
         const shopUsername = window.__MENU_DATA__.shopUsername;
-        console.log("🎯 [Init] Starting analytics for shop:", shopUsername);
 
         if (!shopUsername) {
-          console.warn("⚠️ [Init] No shop username!");
           return;
         }
 
         try {
           const tracker = new AnalyticsTrackerInline(apiBaseUrl);
-          console.log("✅ [Init] Tracker created with apiBase:", apiBaseUrl);
 
-          const result = await tracker.trackMenuView(shopUsername);
-          console.log('✅ [Init] Tracking complete:', result ? 'success' : 'failed');
+          await tracker.trackMenuView(shopUsername);
 
           tracker.saveSessionData(shopUsername, { menuAccessed: true });
-          console.log("✅ [Init] Session saved");
-        } catch (err) {
-          console.error("❌ [Init] Error:", err.message);
+
+          const wireGeoOnFirstInteraction = () => {
+            const interactionEvents = ["pointerdown", "keydown", "touchstart", "scroll"];
+            let captured = false;
+
+            const removeListeners = () => {
+              interactionEvents.forEach((eventName) => {
+                window.removeEventListener(eventName, onInteraction, { passive: true });
+              });
+            };
+
+            const onInteraction = async () => {
+              if (captured) return;
+              captured = true;
+              removeListeners();
+
+              const cachedGeo = tracker.getCachedGeoData();
+              if (cachedGeo) {
+                await tracker.trackMenuView(shopUsername, cachedGeo);
+                return;
+              }
+
+              const geoData = await tracker.getGeolocationData();
+              if (
+                typeof geoData?.latitude === "number" &&
+                typeof geoData?.longitude === "number"
+              ) {
+                tracker.cacheGeoData(geoData);
+                await tracker.trackMenuView(shopUsername, geoData);
+              }
+            };
+
+            interactionEvents.forEach((eventName) => {
+              window.addEventListener(eventName, onInteraction, {
+                passive: true,
+                once: true,
+              });
+            });
+          };
+
+          wireGeoOnFirstInteraction();
+        } catch {}
+      }
+
+      // Run analytics after initial rendering to protect LCP/TTI.
+      const scheduleAnalytics = () => {
+        if ("requestIdleCallback" in window) {
+          window.requestIdleCallback(() => {
+            initializeAnalytics();
+          }, { timeout: 2000 });
+        } else {
+          setTimeout(() => initializeAnalytics(), 1200);
         }
-      }
-
-      // Run analytics
-      console.log("📍 [Init] DOM state:", document.readyState);
+      };
       if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", initializeAnalytics);
+        document.addEventListener("DOMContentLoaded", scheduleAnalytics);
       } else {
-        initializeAnalytics();
+        scheduleAnalytics();
       }
-    </script>
-
-    <script>
-      // Capture console for debugging locally
-      const logs = [];
-      const originalLog = console.log;
-      const originalError = console.error;
-
-      console.log = function (...args) {
-        originalLog.apply(console, args);
-        logs.push(args);
-      };
-
-      console.error = function (...args) {
-        originalError.apply(console, args);
-        logs.push(["ERROR:", ...args]);
-      };
-
-      // Expose logs to window for debugging
-      window.__LOGS__ = logs;
-      console.log("🎯 [Debug] Page script started");
     </script>
 
     <script>
@@ -1078,6 +1130,7 @@ const seoLd =
               const img = document.createElement("img");
               img.className = "loading-skeleton";
               img.src = placeholderSvg;
+              img.alt = `${shopName || "Menu"} - page ${i}`;
               wrapper.appendChild(img);
               imgElements.push(img);
             }
@@ -1102,7 +1155,7 @@ const seoLd =
                 const dataUrl = await renderPageToDataURL(
                   pdf,
                   pageToRender,
-                  1.5,
+                  1.25,
                 );
                 imgElements[pageToRender - 1].src = dataUrl;
                 imgElements[pageToRender - 1].classList.remove(
@@ -1188,6 +1241,7 @@ const seoLd =
               const img = document.createElement("img");
               img.className = "loading-skeleton";
               img.src = placeholderSvg;
+              img.alt = `${shopName || "Menu"} - page ${i}`;
               // Custom attribute to track index
               img.dataset.index = i - 1;
 
@@ -1212,8 +1266,8 @@ const seoLd =
               renderedPages.add(pageToRender);
 
               try {
-                // Desktop uses scale 2 for high zoom quality
-                const dataUrl = await renderPageToDataURL(pdf, pageToRender, 2);
+                // Slightly reduced scale improves decode/render time while preserving readability.
+                const dataUrl = await renderPageToDataURL(pdf, pageToRender, 1.6);
                 menuImages[pageToRender - 1].src = dataUrl;
                 menuImages[pageToRender - 1].classList.remove(
                   "loading-skeleton",
